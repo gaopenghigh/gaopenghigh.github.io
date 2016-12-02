@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>《代码大全2》读书笔记</title>
+  <meta name="description" content="这本书的核心思想是：">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="/reading/2015/12/13/%E4%BB%A3%E7%A0%81%E5%A4%A7%E5%85%A82-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="/feed.xml">
+  
+  
+</head>
+
+
+  <body>
+
+    <header class="site-header" role="banner">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <span class="menu-icon">
+        <svg viewBox="0 0 18 15" width="18px" height="15px">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </span>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">《代码大全2》读书笔记</h1>
+    <p class="post-meta"><time datetime="2015-12-13T20:00:00+08:00" itemprop="datePublished">Dec 13, 2015</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <ul class="section-nav">
+<li class="toc-entry toc-h1"><a href="#第一部分-打好基础">第一部分 打好基础</a></li>
+<li class="toc-entry toc-h2"><a href="#第2章-隐喻">第2章 隐喻</a></li>
+<li class="toc-entry toc-h2"><a href="#第3章-前期准备-measure-twice-cut-once">第3章 前期准备（ Measure Twice, Cut Once）</a></li>
+<li class="toc-entry toc-h1"><a href="#第2部分-创建高质量的代码">第2部分 创建高质量的代码</a></li>
+<li class="toc-entry toc-h2"><a href="#第5章-软件构建中的设计design-in-construction">第5章 软件构建中的设计（Design in Construction）</a></li>
+<li class="toc-entry toc-h2"><a href="#第6章-可以工作的类working-classes">第6章 可以工作的类（Working Classes）</a></li>
+<li class="toc-entry toc-h2"><a href="#第7章-高质量的子程序high-quality-routinges">第7章 高质量的子程序（High-Quality Routinges）</a></li>
+<li class="toc-entry toc-h2"><a href="#第8章-防御式编程defensive-programming">第8章 防御式编程（Defensive Programming）</a></li>
+<li class="toc-entry toc-h1"><a href="#第3部分-变量">第3部分 变量</a></li>
+<li class="toc-entry toc-h2"><a href="#第10章-使用变量的一般事项general-issues-in-using-avriables">第10章 使用变量的一般事项（General Issues in Using Avriables）</a></li>
+<li class="toc-entry toc-h2"><a href="#第11章-变量名的力量the-power-of-variable-names">第11章 变量名的力量（The Power of Variable Names）</a></li>
+<li class="toc-entry toc-h2"><a href="#第12章-基本数据类型fundamental-data-types">第12章 基本数据类型（Fundamental Data Types）</a></li>
+<li class="toc-entry toc-h2"><a href="#第13章-不常见的数据类型unusual-data-types">第13章 不常见的数据类型（Unusual Data Types）</a></li>
+<li class="toc-entry toc-h2"><a href="#第14章-组织直线型代码organizing-straight-line-code">第14章 组织直线型代码（Organizing Straight-Line Code）</a></li>
+<li class="toc-entry toc-h2"><a href="#第15章-使用条件语句using-conditionals">第15章 使用条件语句（Using Conditionals）</a></li>
+<li class="toc-entry toc-h2"><a href="#第16章-控制循环controlling-loops">第16章 控制循环（Controlling Loops）</a></li>
+<li class="toc-entry toc-h2"><a href="#第17章-不常见的控制结构unusual-control-structures">第17章 不常见的控制结构（Unusual Control Structures）</a></li>
+<li class="toc-entry toc-h2"><a href="#第18章-表驱动法table-driven-methods">第18章 表驱动法（Table-Driven Methods）</a></li>
+<li class="toc-entry toc-h2"><a href="#第19章-一般控制问题general-control-issues">第19章 一般控制问题（General Control Issues）</a></li>
+<li class="toc-entry toc-h1"><a href="#第5部分-代码改善code-improvement">第5部分 代码改善（Code Improvement）</a></li>
+<li class="toc-entry toc-h2"><a href="#第20章-软件质量概述the-software-quality-lanscape">第20章 软件质量概述（The Software-Quality Lanscape）</a></li>
+<li class="toc-entry toc-h2"><a href="#第21章-协同构建collaborative-construction">第21章 协同构建（Collaborative Construction）</a></li>
+<li class="toc-entry toc-h2"><a href="#第22章-开发者测试developer-testing">第22章 开发者测试（Developer Testing）</a></li>
+<li class="toc-entry toc-h2"><a href="#第24章-重构refactoring">第24章 重构（Refactoring）</a></li>
+<li class="toc-entry toc-h1"><a href="#第6部分-系统考虑system-considerations">第6部分 系统考虑（System Considerations）</a></li>
+<li class="toc-entry toc-h2"><a href="#第27章-程序规模对构建的影响how-program-size-affects-construction">第27章 程序规模对构建的影响（How Program Size Affects Construction）</a></li>
+<li class="toc-entry toc-h1"><a href="#第29章-集成integration">第29章 集成（Integration）</a></li>
+<li class="toc-entry toc-h1"><a href="#第7部分-软件工艺software-craftsmanship">第7部分 软件工艺（Software Craftsmanship）</a></li>
+<li class="toc-entry toc-h2"><a href="#第32章-自说明代码self-documenting-code">第32章 自说明代码（Self-Documenting Code）</a></li>
+<li class="toc-entry toc-h2"><a href="#第33章-个人性格personal-character">第33章 个人性格（Personal Character）</a></li>
+</ul><p>这本书的核心思想是：</p>
+
+<ol>
+  <li>
+    <p>管理软件项目的本质是管理复杂性。</p>
+  </li>
+  <li>
+    <p>代码承载的是人与人之间的交流。</p>
+  </li>
+</ol>
+
+<h1 id="section">
+<a id="第一部分-打好基础" class="anchor" href="#%E7%AC%AC%E4%B8%80%E9%83%A8%E5%88%86-%E6%89%93%E5%A5%BD%E5%9F%BA%E7%A1%80" aria-hidden="true"><span class="octicon octicon-link"></span></a>第一部分 打好基础</h1>
+
+<h2 id="section-1">
+<a id="第2章-隐喻" class="anchor" href="#%E7%AC%AC2%E7%AB%A0-%E9%9A%90%E5%96%BB" aria-hidden="true"><span class="octicon octicon-link"></span></a>第2章 隐喻</h2>
+
+<p>重要的研发成果常常产自类比（analogy）。通过把你不太理解的东西和一些你较为理解、且十分类似的东西做比较，你可以对这些不太理解的东西产生深刻的理解。这种使用隐喻的方法叫做“建模”。</p>
+
+<p>目前最合适隐喻：建造软件（Building Software）</p>
+
+<h2 id="measure-twice-cut-once">
+<a id="第3章-前期准备-measure-twice-cut-once" class="anchor" href="#%E7%AC%AC3%E7%AB%A0-%E5%89%8D%E6%9C%9F%E5%87%86%E5%A4%87-measure-twice-cut-once" aria-hidden="true"><span class="octicon octicon-link"></span></a>第3章 前期准备（ Measure Twice, Cut Once）</h2>
+
+<p>测试只是完整的质量保证策略的一部分，而且不是最有影响的部分。</p>
+
+<p>迭代开发往往能够减少“前期准备不足”造成的负面影响，但它不能完全消除此影响。</p>
+
+<p>如果需求变更过于频繁，就建立一套变更控制程序（流程）。</p>
+
+<p><strong>错误处理</strong></p>
+
+<p>架构中应该清楚地说明一种“一致地处理错误”的策略。监测到一个错误时，应该“说”出来。</p>
+
+<p><strong>过度工程</strong></p>
+
+<p>在软件中，链条的强度不是取决于最薄弱的一环，而是等于所有薄弱环节的乘积。</p>
+
+<p><strong>变更策略</strong></p>
+
+<p>架构应当清楚地描述处理变更的策略。架构应该列出已经考虑过的有可能会有所增强的功能，并说明“最有可能增强的功能同样也是最容易实现的”。</p>
+
+<p><strong>质量</strong></p>
+
+<p>你不应该担心架构的任何部分。架构不应该包含任何仅仅为了取悦老板的东西。它不应该包含任何对你而言很难理解的东西。你就是那个实现架构的人；如果自己都弄不懂，那怎么实现它？</p>
+
+<h1 id="section-2">
+<a id="第2部分-创建高质量的代码" class="anchor" href="#%E7%AC%AC2%E9%83%A8%E5%88%86-%E5%88%9B%E5%BB%BA%E9%AB%98%E8%B4%A8%E9%87%8F%E7%9A%84%E4%BB%A3%E7%A0%81" aria-hidden="true"><span class="octicon octicon-link"></span></a>第2部分 创建高质量的代码</h1>
+
+<h2 id="design-in-construction">
+<a id="第5章-软件构建中的设计design-in-construction" class="anchor" href="#%E7%AC%AC5%E7%AB%A0-%E8%BD%AF%E4%BB%B6%E6%9E%84%E5%BB%BA%E4%B8%AD%E7%9A%84%E8%AE%BE%E8%AE%A1design-in-construction" aria-hidden="true"><span class="octicon octicon-link"></span></a>第5章 软件构建中的设计（Design in Construction）</h2>
+
+<p>好的高层次设计能提供一个可以稳妥容纳多个较低层次设计的结构。</p>
+
+<p>设计是一个“Wicked Problem” – 你必须把这个问题“解决”一遍以便能够明确地定义它，然后再次解决该问题，从而形成一个可行的方案。</p>
+
+<p>软件设计的最重要目的是管理复杂度（Managing Complexity）。有两类复杂度：</p>
+
+<ul>
+  <li>
+    <p>本质的（essential）：一件事物必须具备，不具备就不再是该事物的属性。比如业务逻辑。</p>
+  </li>
+  <li>
+    <p>偶然的（accidental）：碰巧具有的属性。比如集成环境，编程工具等等。</p>
+  </li>
+</ul>
+
+<p>大脑没法装下整个程序。好的设计，让人在一个时刻可以只专注于一个特定的部分。</p>
+
+<blockquote>
+  <p>你可以把它想做是一种心理上的杂耍（边抛边接：通过轮流抛接，使两个或两个以上的物体同时保持在空中） – 程序要求你在空中（精神上）保持的球越多，你就越可能漏掉其中的某一个，从而导致设计或编码的错误。</p>
+</blockquote>
+
+<p>理想的设计特征（Desirable Characteristics of a Design）</p>
+
+<ul>
+  <li>
+    <p>最小的复杂度（Minimal Complexity）。要避免做出“聪明的”设计。因为“聪明的”设计往往都是难以理解的。如果你设计的方案不能让你在专注于程序的一部分时安心地忽视其他部分的话，这一设计就没什么作用了。</p>
+  </li>
+  <li>
+    <p>易于维护（Ease of maintenance）</p>
+  </li>
+  <li>
+    <p>松散耦合（loose coupling）</p>
+  </li>
+  <li>
+    <p>可扩展性（extensibility）</p>
+  </li>
+  <li>
+    <p>可重用性（reusability）</p>
+  </li>
+  <li>
+    <p>高扇入（high fan-in）。高扇入就是说让大量的类使用某个给定的类。这意味着设计出的系统很好地利用了在较低层次上的工具类。</p>
+  </li>
+  <li>
+    <p>低扇出（low fan-out）。低扇出就是说让一个类里少量或适中（小于7个）地使用其他的类。</p>
+  </li>
+  <li>
+    <p>可移植性（portability）</p>
+  </li>
+  <li>
+    <p>精简性（leanness）。伏尔泰曾说，一本书的完成，不在它不能加入任何内容的时候，而在不能删去任何内容的时候。</p>
+  </li>
+  <li>
+    <p>层次性（stratification）。假设你正在编写一个新系统，其中用到很多设计不佳的旧代码，这时你就应该为新系统编写一个负责同老代码交互的层。在设计这一层时，要让它能隐藏旧代码的低劣质量，同时为新的层次提供一组一致的服务。</p>
+  </li>
+  <li>
+    <p>标准技术（Standard techniques）</p>
+  </li>
+</ul>
+
+<p>优秀设计师的一项重要特质就是对变化的预期能力。好的程序把变化所带来的影响限制在一个子程序、类或者包的内部。</p>
+
+<p>测试友好的设计，往往是好的设计。</p>
+
+<p>“你在应用某种设计方法时越教条化，你所能解决的现实问题就越少”。请把设计看成是一个险恶的、杂乱的和启发式的过程，不要停留于你所想到的第一套解决方案，而是去寻找合作，探求简洁性，在需要的时候做出原型，迭代，并进一步迭代。你将对自己的设计成果感到满意。</p>
+
+<h2 id="working-classes">
+<a id="第6章-可以工作的类working-classes" class="anchor" href="#%E7%AC%AC6%E7%AB%A0-%E5%8F%AF%E4%BB%A5%E5%B7%A5%E4%BD%9C%E7%9A%84%E7%B1%BBworking-classes" aria-hidden="true"><span class="octicon octicon-link"></span></a>第6章 可以工作的类（Working Classes）</h2>
+
+<p>警惕有超过约7个数据成员的类。</p>
+
+<p>优先使用“深层副本（deep copies）”，除非论证可行，才采用“浅层副本（shallow copies）。</p>
+
+<h2 id="high-quality-routinges">
+<a id="第7章-高质量的子程序high-quality-routinges" class="anchor" href="#%E7%AC%AC7%E7%AB%A0-%E9%AB%98%E8%B4%A8%E9%87%8F%E7%9A%84%E5%AD%90%E7%A8%8B%E5%BA%8Fhigh-quality-routinges" aria-hidden="true"><span class="octicon octicon-link"></span></a>第7章 高质量的子程序（High-Quality Routinges）</h2>
+
+<p>复杂的布尔判断，应该使用子程序来实现。</p>
+
+<p>人类很难同时记住超过7个单位的信息。</p>
+
+<p>子程序的名字是它的质量的指示器。如果名字糟糕但恰如其分，那说明这个子程序设计得很差劲。如果名字糟糕而且又不准确，那么它就反映不出程序是干什么的。不管怎样，糟糕的名字都意味着程序需要修改。</p>
+
+<h2 id="defensive-programming">
+<a id="第8章-防御式编程defensive-programming" class="anchor" href="#%E7%AC%AC8%E7%AB%A0-%E9%98%B2%E5%BE%A1%E5%BC%8F%E7%BC%96%E7%A8%8Bdefensive-programming" aria-hidden="true"><span class="octicon octicon-link"></span></a>第8章 防御式编程（Defensive Programming）</h2>
+
+<p>保护程序免遭非法输入数据的破坏。检查所有来源于外部的数据的值。</p>
+
+<p>用错误处理代码来处理预期会发生的状况，用断言来处理绝不应该发生的状况。</p>
+
+<p>可以让软件的某些部分（某个抽象层，公用方法等）处理“不干净的”数据，而让另一些部分处理“干净的”数据，即可让大部分代码无须再担负检查错误数据的职责。</p>
+
+<p><strong>异常</strong></p>
+
+<p>用异常通知程序的其他部分，发生了不可忽略的错误。在恰当的抽象层次抛出恰当的异常，比如底层异常不应该在高层抽象中被抛出。</p>
+
+<h1 id="section-3">
+<a id="第3部分-变量" class="anchor" href="#%E7%AC%AC3%E9%83%A8%E5%88%86-%E5%8F%98%E9%87%8F" aria-hidden="true"><span class="octicon octicon-link"></span></a>第3部分 变量</h1>
+
+<h2 id="general-issues-in-using-avriables">
+<a id="第10章-使用变量的一般事项general-issues-in-using-avriables" class="anchor" href="#%E7%AC%AC10%E7%AB%A0-%E4%BD%BF%E7%94%A8%E5%8F%98%E9%87%8F%E7%9A%84%E4%B8%80%E8%88%AC%E4%BA%8B%E9%A1%B9general-issues-in-using-avriables" aria-hidden="true"><span class="octicon octicon-link"></span></a>第10章 使用变量的一般事项（General Issues in Using Avriables）</h2>
+
+<p><strong>初始化</strong></p>
+
+<p>在声明变量的时候初始化。</p>
+
+<p>理想情况下，在靠近第一次使用变量的位置声明和定义改变量。</p>
+
+<p>在可能的情况下使用final或者const。</p>
+
+<p><strong>作用域</strong></p>
+
+<p>使变量的引用局部化，减小变量的作用域：</p>
+
+<ul>
+  <li>
+    <p>在循环开始之前再去初始化该循环里使用的变量，而不是在该循环所属的子程序的开始处初始化这些变量。</p>
+  </li>
+  <li>
+    <p>直到变量即将被使用时再为其赋值。</p>
+  </li>
+  <li>
+    <p>把相关语句放在一起，可能的情况下提取成单独的子程序。</p>
+  </li>
+  <li>
+    <p>开始时采用最严格的可见性（比如设为private），然后根据需要扩展变量的作用域。</p>
+  </li>
+</ul>
+
+<p>“方便性”和“智力可管理性”两种理念之间的区别，归根结底来源于侧重写程序还是读程序之间的区别。</p>
+
+<p>每个变量只应该用于单一用途，且不应该有隐藏含义（比如当x大于5000时代表什么）。</p>
+
+<h2 id="the-power-of-variable-names">
+<a id="第11章-变量名的力量the-power-of-variable-names" class="anchor" href="#%E7%AC%AC11%E7%AB%A0-%E5%8F%98%E9%87%8F%E5%90%8D%E7%9A%84%E5%8A%9B%E9%87%8Fthe-power-of-variable-names" aria-hidden="true"><span class="octicon octicon-link"></span></a>第11章 变量名的力量（The Power of Variable Names）</h2>
+
+<p>通常，对变量的描述就是最好的变量名。名字对于代码读者的意义要比对作者更重要。</p>
+
+<p>一个好名字通常表达的是“what”而不是“how”。一般而言，如果一个名字反映了计算的某些方面而不是问题本身，那么它反映的就是“how”而不是“what”了。</p>
+
+<p>较长的名字适用于较长的作用域，较短的名字适用于短的作用域（循环、小的方法等）。</p>
+
+<p>计算限定词，如Total、Sum、Average、Min、Max、String、Pointer等等，应该放在名字的最后。</p>
+
+<p>典型的布尔变量名：done, error, found, success, ok等。布尔变量应该是那些隐含了“真/假”含义的名字，如done和success等。应该使用肯定的布尔变量命名，而不是notFound，notDone等。</p>
+
+<p>枚举类型要有统一的组前缀。</p>
+
+<p>避免使用具有相似含义的名字。如果你能够交换两个变量的名字而不会妨碍对程序的理解，那么你就需要为这两个变量重新命名了。</p>
+
+<p>命名规则应该能够区分局部数据、类的数据和全局数据。</p>
+
+<h2 id="fundamental-data-types">
+<a id="第12章-基本数据类型fundamental-data-types" class="anchor" href="#%E7%AC%AC12%E7%AB%A0-%E5%9F%BA%E6%9C%AC%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8Bfundamental-data-types" aria-hidden="true"><span class="octicon octicon-link"></span></a>第12章 基本数据类型（Fundamental Data Types）</h2>
+
+<p>Tips：</p>
+
+<ul>
+  <li>
+    <p>避免使用Magic Number。</p>
+  </li>
+  <li>
+    <p>每次遇到除法时都要检查预防除零错误。</p>
+  </li>
+  <li>
+    <p>显式地使用类型转换。</p>
+  </li>
+  <li>
+    <p>避免混合类型的比较。</p>
+  </li>
+  <li>
+    <p>整数：小心溢出。</p>
+  </li>
+  <li>
+    <p>浮点数：避免“相等”判断，避免数量级相差巨大的数之间的加减运算。</p>
+  </li>
+  <li>
+    <p>字符和字符串：尽早决定是否使用Unicode</p>
+  </li>
+  <li>
+    <p>C语言中的字符串：</p>
+
+    <ul>
+      <li>
+        <p>警惕任何包含字符串和等号的表达式</p>
+      </li>
+      <li>
+        <p>字符串的长度声明为“CONSTANT+1”</p>
+      </li>
+      <li>
+        <p>用null初始化字符串以避免没有结束符的字符串，使用<code class="highlighter-rouge">calloc()</code>而不是<code class="highlighter-rouge">malloc()</code></p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>布尔变量：使用布尔变量来简化复杂的判断</p>
+  </li>
+  <li>
+    <p>数组：</p>
+
+    <ul>
+      <li>
+        <p>任何情况下，确认所有的数组下标都没有超出数组的边界</p>
+      </li>
+      <li>
+        <p>尽量使用容器来取代数组，或者将数组作为顺序化结构来处理</p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>自定义类型</p>
+
+    <ul>
+      <li>
+        <p>使用自定义类型（通过typedef等方法）实现更好的抽象</p>
+      </li>
+      <li>
+        <p>给所创建的类型取功能导向的名字，避免使用那些代表了计算机数据类的类型名（如BigIngeger</p>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<p>, LongString等）。</p>
+
+<h2 id="unusual-data-types">
+<a id="第13章-不常见的数据类型unusual-data-types" class="anchor" href="#%E7%AC%AC13%E7%AB%A0-%E4%B8%8D%E5%B8%B8%E8%A7%81%E7%9A%84%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8Bunusual-data-types" aria-hidden="true"><span class="octicon octicon-link"></span></a>第13章 不常见的数据类型（Unusual Data Types）</h2>
+
+<ul>
+  <li>
+    <p>指针：</p>
+
+    <ul>
+      <li>
+        <p>把指针的操作限制在子程序或类里面。比如通过<code class="highlighter-rouge">NextLink()</code>，<code class="highlighter-rouge">PreviousLink()</code>等方法代替直接操作指针。</p>
+      </li>
+      <li>
+        <p>指针的声明和定义放在一起（一行）。</p>
+      </li>
+      <li>
+        <p>在与“指针分配”相同的作用域中删除指针。</p>
+      </li>
+      <li>
+        <p>在使用指针之前检查指针。</p>
+      </li>
+      <li>
+        <p>用额外的指针变量来提高代码清晰度，避免类似<code class="highlighter-rouge">pointer-&gt;next-&gt;last-&gt;next</code>等使用指针的方法</p>
+      </li>
+      <li>
+        <p>在删除或者释放指针之后把它们设为空值（null）</p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>全局数据：</p>
+
+    <ul>
+      <li>
+        <p>仅在确实需要的使用使用全局数据（首先把每一个变量设置为局部的，仅当需要是再设置为全局的）</p>
+      </li>
+      <li>
+        <p>全局数据应该让人一看便知，如果使用了全局数据，就公开地使用</p>
+      </li>
+      <li>
+        <p>用访问器子程序（Access Routines）来取代全局数据</p>
+
+        <ul>
+          <li>
+            <p>根据全局数据的功能，把全局数据分为不同的模块（包、类）</p>
+          </li>
+          <li>
+            <p>用<code class="highlighter-rouge">static</code>关键字或者它的等价物来声明该数据，确保该数据只有单一实例</p>
+          </li>
+          <li>
+            <p>确保对一项数据的所有访问都发生在同一个抽象层上</p>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="organizing-straight-line-code">
+<a id="第14章-组织直线型代码organizing-straight-line-code" class="anchor" href="#%E7%AC%AC14%E7%AB%A0-%E7%BB%84%E7%BB%87%E7%9B%B4%E7%BA%BF%E5%9E%8B%E4%BB%A3%E7%A0%81organizing-straight-line-code" aria-hidden="true"><span class="octicon octicon-link"></span></a>第14章 组织直线型代码（Organizing Straight-Line Code）</h2>
+
+<p>依赖关系必须清晰明显。通子程序名、程序参数等实现。</p>
+
+<h2 id="using-conditionals">
+<a id="第15章-使用条件语句using-conditionals" class="anchor" href="#%E7%AC%AC15%E7%AB%A0-%E4%BD%BF%E7%94%A8%E6%9D%A1%E4%BB%B6%E8%AF%AD%E5%8F%A5using-conditionals" aria-hidden="true"><span class="octicon octicon-link"></span></a>第15章 使用条件语句（Using Conditionals）</h2>
+
+<p>If-ElseIf-Else结构中，最后一个Else确保所有的情况都考虑到了。</p>
+
+<p>Case语句的顺序：首先按照频率从高到低，频率一样按照字母排列。</p>
+
+<h2 id="controlling-loops">
+<a id="第16章-控制循环controlling-loops" class="anchor" href="#%E7%AC%AC16%E7%AB%A0-%E6%8E%A7%E5%88%B6%E5%BE%AA%E7%8E%AFcontrolling-loops" aria-hidden="true"><span class="octicon octicon-link"></span></a>第16章 控制循环（Controlling Loops）</h2>
+
+<p>使用带退出的循环，类似：</p>
+
+<div class="language-python highlighter-rouge">
+<pre class="highlight"><code>
+<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+
+    <span class="c"># do something</span>
+
+    <span class="k">if</span> <span class="n">some_condition</span><span class="p">:</span>
+
+        <span class="k">break</span>
+
+    <span class="c"># do something</span>
+
+</code></pre>
+</div>
+
+<p>把初始化代码紧放在循环前面。</p>
+
+<p>在循环的开始处用continue进行判断。</p>
+
+<p>一个循环只做一件事。如果用两个循环会导致效率地下，而使用一个循环很合适，那么就把代码写成两个循环，并注明可以把它们合并起来以提高效率，然后等测量数据显示程序的这一部分性能低下的时候再去合并它们。</p>
+
+<p>避免出现依赖循环下标最终取值的代码。</p>
+
+<p>小心那些有很多break散布其中的循环。一个循环包含很多的break，有可能意味着程序员对该循环的结构或者对循环本身的角色缺乏清晰的认识。在大量使用break的场合中，用一系列的循环而非一个含有多个出口的循环可能会使表达更清晰。</p>
+
+<p>循环要尽可能短，嵌套限制在3层内。</p>
+
+<h2 id="unusual-control-structures">
+<a id="第17章-不常见的控制结构unusual-control-structures" class="anchor" href="#%E7%AC%AC17%E7%AB%A0-%E4%B8%8D%E5%B8%B8%E8%A7%81%E7%9A%84%E6%8E%A7%E5%88%B6%E7%BB%93%E6%9E%84unusual-control-structures" aria-hidden="true"><span class="octicon octicon-link"></span></a>第17章 不常见的控制结构（Unusual Control Structures）</h2>
+
+<p>子程序中的多处返回（Multiple Returns）：如果能增强可读性，那么就使用return。</p>
+
+<p>小心谨慎地使用递归。</p>
+
+<h2 id="table-driven-methods">
+<a id="第18章-表驱动法table-driven-methods" class="anchor" href="#%E7%AC%AC18%E7%AB%A0-%E8%A1%A8%E9%A9%B1%E5%8A%A8%E6%B3%95table-driven-methods" aria-hidden="true"><span class="octicon octicon-link"></span></a>第18章 表驱动法（Table-Driven Methods）</h2>
+
+<p>使用一目了然的表来代替复杂的逻辑判断。</p>
+
+<h2 id="general-control-issues">
+<a id="第19章-一般控制问题general-control-issues" class="anchor" href="#%E7%AC%AC19%E7%AB%A0-%E4%B8%80%E8%88%AC%E6%8E%A7%E5%88%B6%E9%97%AE%E9%A2%98general-control-issues" aria-hidden="true"><span class="octicon octicon-link"></span></a>第19章 一般控制问题（General Control Issues）</h2>
+
+<p>Tips：</p>
+
+<ul>
+  <li>
+    <p>编写肯定形式的布尔表达式</p>
+  </li>
+  <li>
+    <p>按照数轴的顺序编写数值表达式，例如<code class="highlighter-rouge">MIN_ELEMENTS &lt;= i and i &lt;= MAX_ELEMENTS</code></p>
+  </li>
+  <li>
+    <p>与0比较的指导原则：</p>
+
+    <ul>
+      <li>
+        <p>隐式地比较逻辑变量</p>
+      </li>
+      <li>
+        <p>把数和0相比较，使用<code class="highlighter-rouge">while (balance != 0) ...</code>而不要使用<code class="highlighter-rouge">while (balance) ...</code></p>
+      </li>
+      <li>
+        <p>在C语言中显式地比较字符和<code class="highlighter-rouge">\0</code></p>
+      </li>
+      <li>
+        <p>把指针与NULL相比较，使用<code class="highlighter-rouge">while (p != NULL) ...</code>而不要用<code class="highlighter-rouge">while (p)</code></p>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<p>控制结构域复杂度密切相关。人类大脑很难处理好超过5到9个的智力实体。</p>
+
+<h1 id="code-improvement">
+<a id="第5部分-代码改善code-improvement" class="anchor" href="#%E7%AC%AC5%E9%83%A8%E5%88%86-%E4%BB%A3%E7%A0%81%E6%94%B9%E5%96%84code-improvement" aria-hidden="true"><span class="octicon octicon-link"></span></a>第5部分 代码改善（Code Improvement）</h1>
+
+<h2 id="the-software-quality-lanscape">
+<a id="第20章-软件质量概述the-software-quality-lanscape" class="anchor" href="#%E7%AC%AC20%E7%AB%A0-%E8%BD%AF%E4%BB%B6%E8%B4%A8%E9%87%8F%E6%A6%82%E8%BF%B0the-software-quality-lanscape" aria-hidden="true"><span class="octicon octicon-link"></span></a>第20章 软件质量概述（The Software-Quality Lanscape）</h2>
+
+<p>质量不应该被认为是次要目标。组织本身必须向程序员们说明，质量应当放在第一位。</p>
+
+<p>实现软件质量目标的拦路虎之一就是失控的变更。</p>
+
+<p>阅读代码是最有效率的找出缺陷的方法。</p>
+
+<p>没有任何一种错误检测方法能够解决全部问题，测试本身并不是排除错误的最有效方法。成功的质量保证计划应该使用多种不同的技术来检查各种不同类型的错误。</p>
+
+<p>缺陷可能在任何阶段渗透到软件中。因此，你需要在早期阶段就开始强调质量保证工作，并且将其贯彻到项目的余下部分中。质量保证工作应该作为技术脉络的一部分，以及项目的结束点。</p>
+
+<p>提高生产效率和改善质量的最佳途径就是减少花在这种代码返工上的时间，无论返工的代码是由需求，设计改变还是调试引起的。</p>
+
+<p>更多的质量保证工作能降低错误率，但不会增加开发的总成本。编写无缺陷软件并不一定会比编写富含缺陷的软件花更多的时间。开发高质量代码最终并没有要求你付出更多，只是你需要对资源进行重新分配，以低廉的成本来防止缺陷的出现，从而避免代驾高昂的修正工作。</p>
+
+<h2 id="collaborative-construction">
+<a id="第21章-协同构建collaborative-construction" class="anchor" href="#%E7%AC%AC21%E7%AB%A0-%E5%8D%8F%E5%90%8C%E6%9E%84%E5%BB%BAcollaborative-construction" aria-hidden="true"><span class="octicon octicon-link"></span></a>第21章 协同构建（Collaborative Construction）</h2>
+
+<p>协同开发实践往往能比测试发现更多的缺陷，并且更有效。</p>
+
+<p>协同开发实践所发现的错误的类型通常跟测试所发现的不同，这意味着你需要同时使用详查和测试来保证你软件的质量。</p>
+
+<p>对代码进行详细检查是减少缺陷的高效方法。</p>
+
+<p>代码详查的记过不应当作为员工表现的评估，因为详查中的代码任然属于开发阶段，评估的依据应该是最终产品而非尚未完成的工作。</p>
+
+<p>进行详查的目的是发现设计或代码总的缺陷，而不是探索替代方案，或者争论谁对谁错，其目的绝不应该是批评作者的设计或者代码。对所有人来说，这一过程都应该是正面的：程序得到了明显改善，参与者都学到了一些东西。</p>
+
+<p>对代码的非正式检查（走查）效果并不好。</p>
+
+<p>软件质量的普遍原理：在减少软件中的缺陷数量的同时，开发周期也能得到缩短。</p>
+
+<p>结对编程的关键（Keys to Success with Pair Programming）</p>
+
+<ul>
+  <li>
+    <p>统一编码规范</p>
+  </li>
+  <li>
+    <p>不要让结对编程变成旁观</p>
+  </li>
+  <li>
+    <p>不要强迫在简单的问题上使用结对编程</p>
+  </li>
+  <li>
+    <p>有规律地对结对人员和分配的工作任务进行轮换</p>
+  </li>
+  <li>
+    <p>鼓励双方跟上对方的步伐</p>
+  </li>
+  <li>
+    <p>避免新手组合</p>
+  </li>
+  <li>
+    <p>指定一个组长</p>
+  </li>
+</ul>
+
+<h2 id="developer-testing">
+<a id="第22章-开发者测试developer-testing" class="anchor" href="#%E7%AC%AC22%E7%AB%A0-%E5%BC%80%E5%8F%91%E8%80%85%E6%B5%8B%E8%AF%95developer-testing" aria-hidden="true"><span class="octicon octicon-link"></span></a>第22章 开发者测试（Developer Testing）</h2>
+
+<ul>
+  <li>
+    <p>错误并非平均地分布在所有的子程序里面，二是集中在少数几个子程序里面。</p>
+  </li>
+  <li>
+    <p>大多数错误的影响范围是相当有限的（不超过一个子程序）。</p>
+  </li>
+  <li>
+    <p>大多数的构建期的错误是编人员的失误造成的。</p>
+  </li>
+  <li>
+    <p>笔误（拼写错误）是一个常见的问题根源</p>
+  </li>
+  <li>
+    <p>很多错误是由于没有彻底地理解设计</p>
+  </li>
+</ul>
+
+<p>软件质量的普遍原则：开发高质量的软件，比开发低质量软件然后修正的成本要低廉。</p>
+
+<h2 id="refactoring">
+<a id="第24章-重构refactoring" class="anchor" href="#%E7%AC%AC24%E7%AB%A0-%E9%87%8D%E6%9E%84refactoring" aria-hidden="true"><span class="octicon octicon-link"></span></a>第24章 重构（Refactoring）</h2>
+
+<p>重构策略：</p>
+
+<ul>
+  <li>
+    <p>在增加子程序、类时进行重构</p>
+  </li>
+  <li>
+    <p>在修补缺陷时进行重构</p>
+  </li>
+  <li>
+    <p>关注容易出错的模块</p>
+  </li>
+  <li>
+    <p>关注高度复杂的模块</p>
+  </li>
+  <li>
+    <p>如果在维护一个系统，改善你手中正在处理的代码。确保代码在离开你的时候比来之前更健康。</p>
+  </li>
+  <li>
+    <p>定义清楚干净代码和拙劣代码之间的边界，然后尝试把代码移过这条边界。</p>
+  </li>
+</ul>
+
+<h1 id="system-considerations">
+<a id="第6部分-系统考虑system-considerations" class="anchor" href="#%E7%AC%AC6%E9%83%A8%E5%88%86-%E7%B3%BB%E7%BB%9F%E8%80%83%E8%99%91system-considerations" aria-hidden="true"><span class="octicon octicon-link"></span></a>第6部分 系统考虑（System Considerations）</h1>
+
+<h2 id="how-program-size-affects-construction">
+<a id="第27章-程序规模对构建的影响how-program-size-affects-construction" class="anchor" href="#%E7%AC%AC27%E7%AB%A0-%E7%A8%8B%E5%BA%8F%E8%A7%84%E6%A8%A1%E5%AF%B9%E6%9E%84%E5%BB%BA%E7%9A%84%E5%BD%B1%E5%93%8Dhow-program-size-affects-construction" aria-hidden="true"><span class="octicon octicon-link"></span></a>第27章 程序规模对构建的影响（How Program Size Affects Construction）</h2>
+
+<p>随着项目规模的增大，更大一部分错误要归咎于需求和设计。</p>
+
+<p>随着项目规模的增长，构建活动将只占项目总工作量的一小部分。</p>
+
+<p>对于大项目来说，如果不有意识地去选择方法论，就将无法完成任务。</p>
+
+<p>项目越正规，你不得不写的文件的数量也越来越多，用于确认你已经完成了自己的工作。</p>
+
+<p>随着项目规模的扩大，交流需要加以支持。大多数方法论的关键点都在于减少交流中的问题，而一项方法论的存亡关键也应取决于它能否促进交流。</p>
+
+<p>在其他条件都相等的时候，大项目的生产率会低于小项目。而大项目的每千行代码错误会高于小项目。</p>
+
+<p>在小项目里的一些看起来“理当如此”的活动在大项目中必须仔细地计划。随着项目规模扩大，构建活动的主导地位逐渐降低。</p>
+
+<p>放大轻量级方法论要好于缩小重量级方法论。最有效的办法是使用“适量级”方法论。</p>
+
+<p>第28章 管理构建（Managing Construction）</p>
+
+<p>鼓励良好编码实践的一些技术：</p>
+
+<ul>
+  <li>
+    <p>给项目每一部分分派两个人。</p>
+  </li>
+  <li>
+    <p>逐行复查代码。</p>
+  </li>
+  <li>
+    <p>要求代码签名。</p>
+  </li>
+  <li>
+    <p>安排一些好的代码示例供人参考。</p>
+  </li>
+  <li>
+    <p>强调代码是共有财产。</p>
+  </li>
+</ul>
+
+<p>一个简单而有效的衡量标准是：“我必须能阅读并理解这个项目里的所有代码”。</p>
+
+<p>需求变更和设计变更：</p>
+
+<ul>
+  <li>
+    <p>遵循某种系统化的变更控制手续。</p>
+  </li>
+  <li>
+    <p>成组地处理变更请求。记下所有的想法和建议，不管它实现起来有多容易。把它记录下来，直到你有时间取处理它们。到那时，把它当做整体来看待，从中选中最有益的一些变更来加以实施。</p>
+  </li>
+</ul>
+
+<p>进度落后时，增加时间通常并不可行。</p>
+
+<p>任何一种项目特征都是可以用某种方法来度量的，而且总会比根本不度量好得多。度量结果也许不会完全精确，度量也许很难做，而且也需要持续不断地改善结果，但是它能使你对软件开发过程进行控制，而如果不度量就根本不可能控制。</p>
+
+<p>程序员之间有着数量级的差异。即时个体程序员都一样，不同编程团队在软件质量和生产率上也有着相当大的差异。</p>
+
+<h1 id="integration">
+<a id="第29章-集成integration" class="anchor" href="#%E7%AC%AC29%E7%AB%A0-%E9%9B%86%E6%88%90integration" aria-hidden="true"><span class="octicon octicon-link"></span></a>第29章 集成（Integration）</h1>
+
+<p>要点：</p>
+
+<ul>
+  <li>
+    <p>构建的先后顺序和集成的步骤会影响涉及、编码、测试各类的顺序。</p>
+  </li>
+  <li>
+    <p>一个经过充分思考的集成顺序能减少测试的工作量，并使调试变容易。</p>
+  </li>
+  <li>
+    <p>增量集成有若干变型，而且–除非项目是微不足道的–任何一种形式的增量集成都比阶段式集成好。</p>
+  </li>
+  <li>
+    <p>针对每个特定的项目，最佳的集成步骤通常是自顶向下、自底向上、风险导向以及其他集成方法的某种组合。T型集成和竖直分块集成通常都能工作得很好。</p>
+  </li>
+  <li>
+    <p>Daily Build能减少集成的问题，提升开发人员的士气，并提供非常有用的项目管理信息。</p>
+  </li>
+</ul>
+
+<h1 id="software-craftsmanship">
+<a id="第7部分-软件工艺software-craftsmanship" class="anchor" href="#%E7%AC%AC7%E9%83%A8%E5%88%86-%E8%BD%AF%E4%BB%B6%E5%B7%A5%E8%89%BAsoftware-craftsmanship" aria-hidden="true"><span class="octicon octicon-link"></span></a>第7部分 软件工艺（Software Craftsmanship）</h1>
+
+<h2 id="self-documenting-code">
+<a id="第32章-自说明代码self-documenting-code" class="anchor" href="#%E7%AC%AC32%E7%AB%A0-%E8%87%AA%E8%AF%B4%E6%98%8E%E4%BB%A3%E7%A0%81self-documenting-code" aria-hidden="true"><span class="octicon octicon-link"></span></a>第32章 自说明代码（Self-Documenting Code）</h2>
+
+<p>好代码本身就是最好的说明。如果代码太糟，需要大量注释，应先试着改进代码，直至无须过多注释为止。</p>
+
+<p>注释应说出代码无法说出的东西–例如概述或用意等信息。</p>
+
+<h2 id="personal-character">
+<a id="第33章-个人性格personal-character" class="anchor" href="#%E7%AC%AC33%E7%AB%A0-%E4%B8%AA%E4%BA%BA%E6%80%A7%E6%A0%BCpersonal-character" aria-hidden="true"><span class="octicon octicon-link"></span></a>第33章 个人性格（Personal Character）</h2>
+
+<p>编程工作本质上是项无法监督的工作，因为没人真正清楚你正在做什么。</p>
+
+<p>高智商与优秀的程序员之间并无太密切的联系。</p>
+
+<p>编程首先是与人交流，其次才是与计算机交流。</p>
+
+<p>人的个性对其编程能力有直接影响。</p>
+
+<p>最有关系的性格为：谦虚、求知欲、诚实、创造性、纪律，以及高明的偷懒。</p>
+
+<p>小聪明、经验、坚持和疯狂既有助也有害。</p>
+
+<p>好性格与培养正确的习惯关系甚大。要成为杰出的程序员，先要养成良好习惯、其他自然水到渠成。</p>
+
+  </div>
+
+  
+</article>
+
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>
+            
+              做美好的人，做酷的事
+            
+            </li>
+            
+            <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+            
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16" width="16px" height="16px"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>
