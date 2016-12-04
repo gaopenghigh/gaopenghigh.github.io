@@ -4,7 +4,7 @@ title: About
 permalink: /about/
 ---
 
-Gaopenghigh
+Gaopenghigh, 程序员，在上海生活工作。
 
 邮箱：gaopenghigh@gmail.com
 
