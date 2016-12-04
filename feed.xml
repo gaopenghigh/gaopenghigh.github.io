@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2016-12-04T15:11:51+08:00</updated><id>//</id><title type="html">做美好的人，做酷的事</title><subtitle>记录所学所想
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2016-12-04T15:18:05+08:00</updated><id>//</id><title type="html">做美好的人，做酷的事</title><subtitle>记录所学所想
 </subtitle><entry><title type="html">《重新定义团队：谷歌如何工作》读书笔记</title><link href="/reading/2016/12/04/%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%9B%A2%E9%98%9F-%E8%B0%B7%E6%AD%8C%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html" rel="alternate" type="text/html" title="《重新定义团队：谷歌如何工作》读书笔记" /><published>2016-12-04T11:10:00+08:00</published><updated>2016-12-04T11:10:00+08:00</updated><id>/reading/2016/12/04/%E3%80%8A%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%9B%A2%E9%98%9F:%E8%B0%B7%E6%AD%8C%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E3%80%8B%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0</id><content type="html" xml:base="/reading/2016/12/04/%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%9B%A2%E9%98%9F-%E8%B0%B7%E6%AD%8C%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html">&lt;p&gt;写于 2016-12-04 。&lt;/p&gt;
 
 &lt;p&gt;这本书的作者拉兹洛·博克是 Google 的首席人才官，他试图通过这本书告诉读者 Google 是如何做到把最优秀的人才聚集在一起并让他们开心工作的。&lt;/p&gt;
@@ -85,16 +85,19 @@
 
 &lt;h3 id=&quot;section-8&quot;&gt;马上行动&lt;/h3&gt;
 
-&lt;p&gt;书的最后，作者给出了每家公司都可以马上行动的一些事：
-	1. 赋予工作意义
-	2. 相信员工
-	3. 只聘用比你更优秀的人
-	4. 不要将职业发展与管理绩效混为一谈
-	5. 关注团队的两端 – 最优员工和最差员工
-	6. 既要节俭又要慷慨
-	7. 不公平薪酬
-	8. 助推
-	9. 管理日益提神的期望&lt;/p&gt;</content><summary type="html">写于 2016-12-04 。</summary></entry><entry><title type="html">《重新定义公司：谷歌是如何运营的》读书笔记</title><link href="/reading/2016/12/03/%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%85%AC%E5%8F%B8-%E8%B0%B7%E6%AD%8C%E6%98%AF%E5%A6%82%E4%BD%95%E8%BF%90%E8%90%A5%E7%9A%84-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html" rel="alternate" type="text/html" title="《重新定义公司：谷歌是如何运营的》读书笔记" /><published>2016-12-03T23:52:00+08:00</published><updated>2016-12-03T23:52:00+08:00</updated><id>/reading/2016/12/03/%E3%80%8A%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%85%AC%E5%8F%B8:%E8%B0%B7%E6%AD%8C%E6%98%AF%E5%A6%82%E4%BD%95%E8%BF%90%E8%90%A5%E7%9A%84%E3%80%8B%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0</id><content type="html" xml:base="/reading/2016/12/03/%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%85%AC%E5%8F%B8-%E8%B0%B7%E6%AD%8C%E6%98%AF%E5%A6%82%E4%BD%95%E8%BF%90%E8%90%A5%E7%9A%84-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html">&lt;p&gt;写于 2016-12-03 。&lt;/p&gt;
+&lt;p&gt;书的最后，作者给出了每家公司都可以马上行动的一些事：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;赋予工作意义&lt;/li&gt;
+  &lt;li&gt;相信员工&lt;/li&gt;
+  &lt;li&gt;只聘用比你更优秀的人&lt;/li&gt;
+  &lt;li&gt;不要将职业发展与管理绩效混为一谈&lt;/li&gt;
+  &lt;li&gt;关注团队的两端 – 最优员工和最差员工&lt;/li&gt;
+  &lt;li&gt;既要节俭又要慷慨&lt;/li&gt;
+  &lt;li&gt;不公平薪酬&lt;/li&gt;
+  &lt;li&gt;助推&lt;/li&gt;
+  &lt;li&gt;管理日益提神的期望&lt;/li&gt;
+&lt;/ol&gt;</content><summary type="html">写于 2016-12-04 。</summary></entry><entry><title type="html">《重新定义公司：谷歌是如何运营的》读书笔记</title><link href="/reading/2016/12/03/%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%85%AC%E5%8F%B8-%E8%B0%B7%E6%AD%8C%E6%98%AF%E5%A6%82%E4%BD%95%E8%BF%90%E8%90%A5%E7%9A%84-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html" rel="alternate" type="text/html" title="《重新定义公司：谷歌是如何运营的》读书笔记" /><published>2016-12-03T23:52:00+08:00</published><updated>2016-12-03T23:52:00+08:00</updated><id>/reading/2016/12/03/%E3%80%8A%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%85%AC%E5%8F%B8:%E8%B0%B7%E6%AD%8C%E6%98%AF%E5%A6%82%E4%BD%95%E8%BF%90%E8%90%A5%E7%9A%84%E3%80%8B%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0</id><content type="html" xml:base="/reading/2016/12/03/%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%85%AC%E5%8F%B8-%E8%B0%B7%E6%AD%8C%E6%98%AF%E5%A6%82%E4%BD%95%E8%BF%90%E8%90%A5%E7%9A%84-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html">&lt;p&gt;写于 2016-12-03 。&lt;/p&gt;
 
 &lt;p&gt;最近对管理学感兴趣，于是找来这本 Google 前 CEO 埃里克·施密特写的《如何定义公司：谷歌是如何运营的》。Google 是 21 世纪以来最成功的公司之一，一直以来给人的印象都是“酷”，对于一家拥有几万雇员的大公司，很不容易。一家公司应该如何运营，才能在赚钱的同时，赢得大家的由衷的尊重？这是我想从这本书里面得到的。&lt;/p&gt;
 
