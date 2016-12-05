@@ -4,11 +4,9 @@ layout: default
 
 <div class="home">
 
-  <h1 class="page-heading">Posts</h1>
-  
   {{ content }}
 
-  <h2>读书</h2>
+  <h1>读书</h1>
   <ul>
     {% for post in site.posts %}
         {% if post.categories contains "Reading" %}
@@ -20,6 +18,18 @@ layout: default
     {% endfor %}
   </ul>
 
+  <h1>技术</h1>
+  <h2>Mesos</h2>
+  <ul>
+    {% for post in site.posts %}
+        {% if post.categories contains "Mesos" %}
+      <li>
+        <span class="post-meta">{{ post.date | date: "%Y-%m-%d" }}</span>
+            <a class="" href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
+      </li>
+        {% endif %}
+    {% endfor %}
+  </ul>
 
   <p class="rss-subscribe">subscribe <a href="{{ "/feed.xml" | relative_url }}">via RSS</a></p>
 

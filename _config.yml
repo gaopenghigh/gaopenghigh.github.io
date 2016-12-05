@@ -28,7 +28,7 @@ safe: false
 gems:
   - jekyll-feed
   - jekyll-archives
-  - jekyll-toc
+    #- jekyll-toc
 exclude:
   - Gemfile
   - Gemfile.lock
