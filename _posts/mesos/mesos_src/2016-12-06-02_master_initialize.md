@@ -6,6 +6,8 @@ categories: Mesos
 toc: true
 ---
 
+# Master Process 的初始化
+
 Master 初始化的代码实现在 `src/master/master.cpp` 中：
 
 ```c++
