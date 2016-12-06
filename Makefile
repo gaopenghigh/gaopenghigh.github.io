@@ -2,7 +2,7 @@ deploy:
 	git checkout source
 	jekyll build
 	git add -A
-	git commit -m "update source"
+	git commit -m "update source" || echo "nothing to commit, continue"
 	cp -r _site/ /tmp/
 	git checkout master
 	rm -r ./*
