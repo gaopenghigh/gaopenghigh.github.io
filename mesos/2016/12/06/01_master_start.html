@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Mesos 源码学习(1) Mesos Master 的启动</title>
-  <meta name="description" content="Mesos Master 启动相关的代码在 src/master/main.cpp 中。">
+  <meta name="description" content="Master 的启动">
 
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="/mesos/2016/12/06/01_master_start.html">
@@ -68,14 +68,74 @@
   </header>
 
   <div class="post-content" itemprop="articleBody">
-    <p>Mesos Master 启动相关的代码在 <code class="highlighter-rouge">src/master/main.cpp</code> 中。</p>
+    <div id="toc-container">
+  <table class="toc" id="toc">
+    <tbody>
+      <tr>
+        <td>
+          <div id="toctitle">
+            <h2>Contents</h2>
+          </div>
+          <ul>
+            <li class="toc_level-1 toc_section-1">
+              <a href="#tocAnchor-1-1"><span class="tocnumber">1</span> <span class="toctext">Master 的启动</span></a>
+              <ul>
+                <li class="toc_level-2 toc_section-2">
+                  <a href="#tocAnchor-1-1-1"><span class="tocnumber">1.1</span> <span class="toctext">解析 flags 参数</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-3">
+                  <a href="#tocAnchor-1-1-2"><span class="tocnumber">1.2</span> <span class="toctext">初始化 master process</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-4">
+                  <a href="#tocAnchor-1-1-3"><span class="tocnumber">1.3</span> <span class="toctext">初始化 Version Process</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-5">
+                  <a href="#tocAnchor-1-1-4"><span class="tocnumber">1.4</span> <span class="toctext">初始化 firewall rules</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-6">
+                  <a href="#tocAnchor-1-1-5"><span class="tocnumber">1.5</span> <span class="toctext">加载 module 和 anonymous modules</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-7">
+                  <a href="#tocAnchor-1-1-6"><span class="tocnumber">1.6</span> <span class="toctext">初始化 Hooks</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-8">
+                  <a href="#tocAnchor-1-1-7"><span class="tocnumber">1.7</span> <span class="toctext">创建 Allocator</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-9">
+                  <a href="#tocAnchor-1-1-8"><span class="tocnumber">1.8</span> <span class="toctext">Registry storage</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-10">
+                  <a href="#tocAnchor-1-1-9"><span class="tocnumber">1.9</span> <span class="toctext">State</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-11">
+                  <a href="#tocAnchor-1-1-10"><span class="tocnumber">1.10</span> <span class="toctext">创建 Master contendor 和 detector</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-12">
+                  <a href="#tocAnchor-1-1-11"><span class="tocnumber">1.11</span> <span class="toctext">初始化 Authorizer</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-13">
+                  <a href="#tocAnchor-1-1-12"><span class="tocnumber">1.12</span> <span class="toctext">设置 Slave removal rate limiter</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-14">
+                  <a href="#tocAnchor-1-1-13"><span class="tocnumber">1.13</span> <span class="toctext">创建 master process</span></a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div><h1 id="tocAnchor-1-1">Master 的启动</h1>
 
-<h2 id="flags-">解析 flags 参数</h2>
+<p>Mesos Master 启动相关的代码在 <code class="highlighter-rouge">src/master/main.cpp</code> 中。</p>
+
+<h2 id="tocAnchor-1-1-1">解析 flags 参数</h2>
 
 <p>通过解析以 <code class="highlighter-rouge">MESOS_</code> 开头的环境变量，来初始化一些参数，并验证参数的合法性。
 具体的参数参考 <a href="http://mesos.apache.org/documentation/latest/configuration/">Mesos Configuration</a>。</p>
 
-<h2 id="master-process">初始化 master process</h2>
+<h2 id="tocAnchor-1-1-2">初始化 master process</h2>
 
 <p>初始化一个 name 为 <code class="highlighter-rouge">master</code> 的 process :</p>
 
@@ -127,7 +187,7 @@
 </code></pre>
 </div>
 
-<h2 id="version-process">初始化 Version Process</h2>
+<h2 id="tocAnchor-1-1-3">初始化 Version Process</h2>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
@@ -141,7 +201,7 @@
 <p>其中 VersionProcess 就是一个 name 为 “version” 的 process，负责打印版本号的。
 VersionProcess 定义在 <code class="highlighter-rouge">src/version/version.hpp</code> 和 <code class="highlighter-rouge">src/version/version.cpp</code> 中。</p>
 
-<h2 id="firewall-rules">初始化 firewall rules</h2>
+<h2 id="tocAnchor-1-1-4">初始化 firewall rules</h2>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
@@ -171,7 +231,7 @@ VersionProcess 定义在 <code class="highlighter-rouge">src/version/version.hpp
 
 <p>通过 firewall 可以设置一些 endpoint 不可用。</p>
 
-<h2 id="module--anonymous-modules">加载 module 和 anonymous modules</h2>
+<h2 id="tocAnchor-1-1-5">加载 module 和 anonymous modules</h2>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code>  <span class="k">if</span> <span class="p">(</span><span class="n">flags</span><span class="p">.</span><span class="n">modules</span><span class="p">.</span><span class="n">isSome</span><span class="p">())</span> <span class="p">{</span>
     <span class="n">Try</span><span class="o">&lt;</span><span class="n">Nothing</span><span class="o">&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="n">ModuleManager</span><span class="o">::</span><span class="n">load</span><span class="p">(</span><span class="n">flags</span><span class="p">.</span><span class="n">modules</span><span class="p">.</span><span class="n">get</span><span class="p">());</span>
@@ -221,7 +281,7 @@ VersionProcess 定义在 <code class="highlighter-rouge">src/version/version.hpp
   <li>提供 Hook，Hook 是一些定义好的接口，这些 Hook 会在某些阶段被调用到，Module 可以选择实现其中的某些 Hook 来实现某种需求；</li>
 </ol>
 
-<h2 id="hooks">初始化 Hooks</h2>
+<h2 id="tocAnchor-1-1-6">初始化 Hooks</h2>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code>  <span class="c1">// Initialize hooks.
 </span>  <span class="k">if</span> <span class="p">(</span><span class="n">flags</span><span class="p">.</span><span class="n">hooks</span><span class="p">.</span><span class="n">isSome</span><span class="p">())</span> <span class="p">{</span>
@@ -249,7 +309,7 @@ VersionProcess 定义在 <code class="highlighter-rouge">src/version/version.hpp
   <li><code class="highlighter-rouge">slaveTaskStatusDecorator</code>：当 executor 向 slave 报告 task status 时，该 hook 被调用，生成 task 的 status ，覆盖原来的。</li>
 </ul>
 
-<h2 id="allocator">创建 Allocator</h2>
+<h2 id="tocAnchor-1-1-7">创建 Allocator</h2>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code>  <span class="c1">// Create an instance of allocator.
 </span>  <span class="k">const</span> <span class="n">string</span> <span class="n">allocatorName</span> <span class="o">=</span> <span class="n">flags</span><span class="p">.</span><span class="n">allocator</span><span class="p">;</span>
@@ -375,7 +435,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：</p>
 <p>这个 wrapper 通过 <code class="highlighter-rouge">dispatch</code>，调用了对应 AllocatorProcess 的 <code class="highlighter-rouge">MesosAllocatorProcess::requestResources</code>
 方法，传入了两个参数 <code class="highlighter-rouge">frameworkId</code> 和 <code class="highlighter-rouge">requests</code>。</p>
 
-<h2 id="registry-storage">Registry storage</h2>
+<h2 id="tocAnchor-1-1-8">Registry storage</h2>
 
 <p>Registry storage 负责存储数据，根据参数，数据可以存储在：</p>
 <ol>
@@ -433,7 +493,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：</p>
 </code></pre>
 </div>
 
-<h2 id="state">State</h2>
+<h2 id="tocAnchor-1-1-9">State</h2>
 
 <p>创建一个 <code class="highlighter-rouge">state</code> 来记录状态:</p>
 
@@ -495,7 +555,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：</p>
 </code></pre>
 </div>
 
-<h2 id="master-contendor--detector">创建 Master contendor 和 detector</h2>
+<h2 id="tocAnchor-1-1-10">创建 Master contendor 和 detector</h2>
 
 <p>简单地说，Contender 负责选主，Detector 负责探测谁是主。</p>
 
@@ -525,7 +585,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：</p>
 </code></pre>
 </div>
 
-<h2 id="authorizer">初始化 Authorizer</h2>
+<h2 id="tocAnchor-1-1-11">初始化 Authorizer</h2>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code>  <span class="p">...</span>
   <span class="n">authorizer</span> <span class="o">=</span> <span class="n">Authorizer</span><span class="o">::</span><span class="n">create</span><span class="p">(</span><span class="n">flags</span><span class="p">.</span><span class="n">acls</span><span class="p">.</span><span class="n">get</span><span class="p">());</span>
@@ -542,7 +602,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：</p>
 </code></pre>
 </div>
 
-<h2 id="slave-removal-rate-limiter">设置 Slave removal rate limiter</h2>
+<h2 id="tocAnchor-1-1-12">设置 Slave removal rate limiter</h2>
 
 <p>为了保证集群的稳定，可以设置 slave 不能以太快的速率被 remove 出集群。</p>
 
@@ -555,7 +615,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：</p>
 </code></pre>
 </div>
 
-<h2 id="master-process-1">创建 master process</h2>
+<h2 id="tocAnchor-1-1-13">创建 master process</h2>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code>  <span class="n">Master</span><span class="o">*</span> <span class="n">master</span> <span class="o">=</span>
     <span class="k">new</span> <span class="n">Master</span><span class="p">(</span>

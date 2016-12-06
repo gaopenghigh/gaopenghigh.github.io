@@ -1,5 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2016-12-06T14:53:35+08:00</updated><id>//</id><title type="html">做美好的人，做酷的事</title><subtitle>记录所学所想
-</subtitle><entry><title type="html">Mesos 源码学习(2) Mesos Master 初始化</title><link href="/mesos/2016/12/06/02_master_initialize.html" rel="alternate" type="text/html" title="Mesos 源码学习(2) Mesos Master 初始化" /><published>2016-12-06T12:00:00+08:00</published><updated>2016-12-06T12:00:00+08:00</updated><id>/mesos/2016/12/06/02_master_initialize</id><content type="html" xml:base="/mesos/2016/12/06/02_master_initialize.html">&lt;p&gt;Master 初始化的代码实现在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/master/master.cpp&lt;/code&gt; 中：&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2016-12-06T14:57:40+08:00</updated><id>//</id><title type="html">做美好的人，做酷的事</title><subtitle>记录所学所想
+</subtitle><entry><title type="html">Mesos 源码学习(2) Mesos Master 初始化</title><link href="/mesos/2016/12/06/02_master_initialize.html" rel="alternate" type="text/html" title="Mesos 源码学习(2) Mesos Master 初始化" /><published>2016-12-06T12:00:00+08:00</published><updated>2016-12-06T12:00:00+08:00</updated><id>/mesos/2016/12/06/02_master_initialize</id><content type="html" xml:base="/mesos/2016/12/06/02_master_initialize.html">&lt;h1 id=&quot;master-process-&quot;&gt;Master Process 的初始化&lt;/h1&gt;
+
+&lt;p&gt;Master 初始化的代码实现在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/master/master.cpp&lt;/code&gt; 中：&lt;/p&gt;
 
 &lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Master&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;initialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
 &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
@@ -270,7 +272,9 @@
 
 &lt;h2 id=&quot;section-2&quot;&gt;完成初始化&lt;/h2&gt;
 
-&lt;p&gt;至此，master 已经完成初始化，master process 开始工作，接受并处理来自其他组件或 API 的消息。&lt;/p&gt;</content><summary type="html">Master 初始化的代码实现在 src/master/master.cpp 中：</summary></entry><entry><title type="html">Mesos 源码学习(1) Mesos Master 的启动</title><link href="/mesos/2016/12/06/01_master_start.html" rel="alternate" type="text/html" title="Mesos 源码学习(1) Mesos Master 的启动" /><published>2016-12-06T11:00:00+08:00</published><updated>2016-12-06T11:00:00+08:00</updated><id>/mesos/2016/12/06/01_master_start</id><content type="html" xml:base="/mesos/2016/12/06/01_master_start.html">&lt;p&gt;Mesos Master 启动相关的代码在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/master/main.cpp&lt;/code&gt; 中。&lt;/p&gt;
+&lt;p&gt;至此，master 已经完成初始化，master process 开始工作，接受并处理来自其他组件或 API 的消息。&lt;/p&gt;</content><summary type="html">Master Process 的初始化</summary></entry><entry><title type="html">Mesos 源码学习(1) Mesos Master 的启动</title><link href="/mesos/2016/12/06/01_master_start.html" rel="alternate" type="text/html" title="Mesos 源码学习(1) Mesos Master 的启动" /><published>2016-12-06T11:00:00+08:00</published><updated>2016-12-06T11:00:00+08:00</updated><id>/mesos/2016/12/06/01_master_start</id><content type="html" xml:base="/mesos/2016/12/06/01_master_start.html">&lt;h1 id=&quot;master-&quot;&gt;Master 的启动&lt;/h1&gt;
+
+&lt;p&gt;Mesos Master 启动相关的代码在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/master/main.cpp&lt;/code&gt; 中。&lt;/p&gt;
 
 &lt;h2 id=&quot;flags-&quot;&gt;解析 flags 参数&lt;/h2&gt;
 
@@ -832,7 +836,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：&lt;
 
 &lt;p&gt;主要工作就是把一些信息存到 &lt;code class=&quot;highlighter-rouge&quot;&gt;info_&lt;/code&gt; 中，&lt;code class=&quot;highlighter-rouge&quot;&gt;info_&lt;/code&gt; 的类型是 &lt;code class=&quot;highlighter-rouge&quot;&gt;MasterInfo&lt;/code&gt;。&lt;/p&gt;
 
-&lt;p&gt;接下来，开始 master process 的初始化。&lt;/p&gt;</content><summary type="html">Mesos Master 启动相关的代码在 src/master/main.cpp 中。</summary></entry><entry><title type="html">Mesos 源码学习(0) libprocess 简介</title><link href="/mesos/2016/12/05/00_libprocess.html" rel="alternate" type="text/html" title="Mesos 源码学习(0) libprocess 简介" /><published>2016-12-05T10:00:00+08:00</published><updated>2016-12-05T10:00:00+08:00</updated><id>/mesos/2016/12/05/00_libprocess</id><content type="html" xml:base="/mesos/2016/12/05/00_libprocess.html">&lt;h1 id=&quot;libprocess&quot;&gt;什么是 &lt;code class=&quot;highlighter-rouge&quot;&gt;libprocess&lt;/code&gt;&lt;/h1&gt;
+&lt;p&gt;接下来，开始 master process 的初始化。&lt;/p&gt;</content><summary type="html">Master 的启动</summary></entry><entry><title type="html">Mesos 源码学习(0) libprocess 简介</title><link href="/mesos/2016/12/05/00_libprocess.html" rel="alternate" type="text/html" title="Mesos 源码学习(0) libprocess 简介" /><published>2016-12-05T10:00:00+08:00</published><updated>2016-12-05T10:00:00+08:00</updated><id>/mesos/2016/12/05/00_libprocess</id><content type="html" xml:base="/mesos/2016/12/05/00_libprocess.html">&lt;h1 id=&quot;libprocess&quot;&gt;什么是 &lt;code class=&quot;highlighter-rouge&quot;&gt;libprocess&lt;/code&gt;&lt;/h1&gt;
 
 &lt;p&gt;Mesos 底层依赖于 libprocess 库，该库用 C++ 实现了 Actor 模式，不过它不叫 actor，而叫做 process。&lt;/p&gt;
 
