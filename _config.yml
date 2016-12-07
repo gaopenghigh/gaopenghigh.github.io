@@ -24,6 +24,9 @@ github_username:  gaopenghigh
 # Build settings
 markdown: kramdown
 theme: minima
+highlighter: rouge
+highlighter_syntax: rouge
+
 safe: false
 gems:
   - jekyll-feed

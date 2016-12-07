@@ -296,7 +296,7 @@ void Slave::forward(StatusUpdate update)
 
 ## 异步地执行 recovery
 
-详见 [Slave Recovery]({{ site.baseurl }}{% post_url 2016-12-07-05_slave_recovery %})。
+详见 [Slave Recovery]({{ site.baseurl }}{% post_url /mesos/mesos_src/2016-12-07-05_slave_recovery %})。
 
 
 ## Slave Process 初始化完成
