@@ -1,12 +1,10 @@
 ---
 layout: post
-title:  "Mesos 源码学习(2) Mesos Master 初始化"
-date:   2016-12-06 12:00:00 +0800
+title: "Mesos 源码学习(2) Mesos Master 初始化"
+date: 2016-12-06 12:00:00 +0800
 categories: Mesos
 toc: true
 ---
-
-# Master Process 的初始化
 
 Master 初始化的代码实现在 `src/master/master.cpp` 中：
 

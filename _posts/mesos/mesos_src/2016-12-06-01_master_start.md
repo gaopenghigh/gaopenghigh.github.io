@@ -1,12 +1,11 @@
 ---
 layout: post
-title:  "Mesos 源码学习(1) Mesos Master 的启动"
-date:   2016-12-06 11:00:00 +0800
+title: "Mesos 源码学习(1) Mesos Master 的启动"
+date: 2016-12-06 11:00:00 +0800
 categories: Mesos
 toc: true
 ---
 
-# Master 的启动
 
 Mesos Master 启动相关的代码在 `src/master/main.cpp` 中。
 
