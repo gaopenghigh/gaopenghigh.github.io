@@ -482,7 +482,7 @@ void Slave::sendExecutorTerminatedStatusUpdate(
 
 拿到消息后，调用 `Slave::statusUpdate` 方法把消息发送出去，最终会发给 master 。
 具体的发送机制参考
-[Mesos 源码学习(6) Master 和 Slave 之间的消息]({{ site.baseurl }}{% post_url /mesos/mesos_src/2016-12-08-06_messages_between_master_and_slave.md %})。
+[Mesos 源码学习(6) Master 和 Slave 之间的消息]({{ site.baseurl }}{% post_url /mesos/mesos_src/2016-12-08-06_messages_between_master_and_slave %})。
 
 `removeExecutor` 负责把一个 Executor 从 Slave 中移除。主要逻辑就是做一些检查，进行垃圾回收，
 做 checkpoint ，最后把 executor 的数据结构从 Slave 中去除。
@@ -531,7 +531,7 @@ Executor ，如果他们的状态仍然还是 `REGISTERING`，那就说明他们
 2. 如果启动参数 `--recover=cleanup`，则调用 libprocess 的 `terminate` 方法终结 slave process ；
 3. 如果启动参数 `--recover=reconnect`，则：
     1. 调用 `detector->detect()` 找到 leader master，找到后调用 `Slave::detected`，具体参考
-	   [Mesos 源码学习(6) Master 和 Slave 之间的消息]({{ site.baseurl }}{% post_url /mesos/mesos_src/2016-12-08-06_messages_between_master_and_slave.md %})。
+	   [Mesos 源码学习(6) Master 和 Slave 之间的消息]({{ site.baseurl }}{% post_url /mesos/mesos_src/2016-12-08-06_messages_between_master_and_slave %})。
 	2. 调用 `forwardOversubscribed()` 转发超发的资源，超发的资源从 ResourceEstimator 获取，经过一些
 	   计算后生成一个 `UpdateSlaveMessage` 消息发送给 master。
 	3. 调用 `Slave::qosCorrections()` 来启动 QoS Controller。该方法会自己调用自己实现不断地做检查，
