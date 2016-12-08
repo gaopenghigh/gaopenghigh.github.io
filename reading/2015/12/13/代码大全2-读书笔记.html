@@ -201,15 +201,15 @@
   </li>
 </ol>
 
-<h1 id="tocAnchor-1-1">第一部分 打好基础</h1>
+<h2 id="tocAnchor-1-1">第一部分 打好基础</h2>
 
-<h2 id="tocAnchor-1-1-1">第2章 隐喻</h2>
+<h3 id="tocAnchor-1-1-1">第2章 隐喻</h3>
 
 <p>重要的研发成果常常产自类比（analogy）。通过把你不太理解的东西和一些你较为理解、且十分类似的东西做比较，你可以对这些不太理解的东西产生深刻的理解。这种使用隐喻的方法叫做“建模”。</p>
 
 <p>目前最合适隐喻：建造软件（Building Software）</p>
 
-<h2 id="tocAnchor-1-1-2">第3章 前期准备（ Measure Twice, Cut Once）</h2>
+<h3 id="tocAnchor-1-1-2">第3章 前期准备（ Measure Twice, Cut Once）</h3>
 
 <p>测试只是完整的质量保证策略的一部分，而且不是最有影响的部分。</p>
 
@@ -241,9 +241,9 @@
 
 <p>你不应该担心架构的任何部分。架构不应该包含任何仅仅为了取悦老板的东西。它不应该包含任何对你而言很难理解的东西。你就是那个实现架构的人；如果自己都弄不懂，那怎么实现它？</p>
 
-<h1 id="tocAnchor-1-4">第2部分 创建高质量的代码</h1>
+<h2 id="tocAnchor-1-4">第2部分 创建高质量的代码</h2>
 
-<h2 id="tocAnchor-1-4-1">第5章 软件构建中的设计（Design in Construction）</h2>
+<h3 id="tocAnchor-1-4-1">第5章 软件构建中的设计（Design in Construction）</h3>
 
 <p>好的高层次设计能提供一个可以稳妥容纳多个较低层次设计的结构。</p>
 
@@ -310,13 +310,13 @@
 
 <p>“你在应用某种设计方法时越教条化，你所能解决的现实问题就越少”。请把设计看成是一个险恶的、杂乱的和启发式的过程，不要停留于你所想到的第一套解决方案，而是去寻找合作，探求简洁性，在需要的时候做出原型，迭代，并进一步迭代。你将对自己的设计成果感到满意。</p>
 
-<h2 id="tocAnchor-1-4-2">第6章 可以工作的类（Working Classes）</h2>
+<h3 id="tocAnchor-1-4-2">第6章 可以工作的类（Working Classes）</h3>
 
 <p>警惕有超过约7个数据成员的类。</p>
 
 <p>优先使用“深层副本（deep copies）”，除非论证可行，才采用“浅层副本（shallow copies）。</p>
 
-<h2 id="tocAnchor-1-4-3">第7章 高质量的子程序（High-Quality Routinges）</h2>
+<h3 id="tocAnchor-1-4-3">第7章 高质量的子程序（High-Quality Routinges）</h3>
 
 <p>复杂的布尔判断，应该使用子程序来实现。</p>
 
@@ -324,7 +324,7 @@
 
 <p>子程序的名字是它的质量的指示器。如果名字糟糕但恰如其分，那说明这个子程序设计得很差劲。如果名字糟糕而且又不准确，那么它就反映不出程序是干什么的。不管怎样，糟糕的名字都意味着程序需要修改。</p>
 
-<h2 id="tocAnchor-1-4-4">第8章 防御式编程（Defensive Programming）</h2>
+<h3 id="tocAnchor-1-4-4">第8章 防御式编程（Defensive Programming）</h3>
 
 <p>保护程序免遭非法输入数据的破坏。检查所有来源于外部的数据的值。</p>
 
@@ -338,9 +338,9 @@
 
 <p>用异常通知程序的其他部分，发生了不可忽略的错误。在恰当的抽象层次抛出恰当的异常，比如底层异常不应该在高层抽象中被抛出。</p>
 
-<h1 id="tocAnchor-1-9">第3部分 变量</h1>
+<h2 id="tocAnchor-1-9">第3部分 变量</h2>
 
-<h2 id="tocAnchor-1-9-1">第10章 使用变量的一般事项（General Issues in Using Avriables）</h2>
+<h3 id="tocAnchor-1-9-1">第10章 使用变量的一般事项（General Issues in Using Avriables）</h3>
 
 <p>
   <strong>初始化</strong>
@@ -377,7 +377,7 @@
 
 <p>每个变量只应该用于单一用途，且不应该有隐藏含义（比如当x大于5000时代表什么）。</p>
 
-<h2 id="tocAnchor-1-9-2">第11章 变量名的力量（The Power of Variable Names）</h2>
+<h3 id="tocAnchor-1-9-2">第11章 变量名的力量（The Power of Variable Names）</h3>
 
 <p>通常，对变量的描述就是最好的变量名。名字对于代码读者的意义要比对作者更重要。</p>
 
@@ -395,7 +395,7 @@
 
 <p>命名规则应该能够区分局部数据、类的数据和全局数据。</p>
 
-<h2 id="tocAnchor-1-9-3">第12章 基本数据类型（Fundamental Data Types）</h2>
+<h3 id="tocAnchor-1-9-3">第12章 基本数据类型（Fundamental Data Types）</h3>
 
 <p>Tips：</p>
 
@@ -467,7 +467,7 @@
 
 <p>, LongString等）。</p>
 
-<h2 id="tocAnchor-1-9-4">第13章 不常见的数据类型（Unusual Data Types）</h2>
+<h3 id="tocAnchor-1-9-4">第13章 不常见的数据类型（Unusual Data Types）</h3>
 
 <ul>
   <li>
@@ -523,30 +523,30 @@
   </li>
 </ul>
 
-<h2 id="tocAnchor-1-9-5">第14章 组织直线型代码（Organizing Straight-Line Code）</h2>
+<h3 id="tocAnchor-1-9-5">第14章 组织直线型代码（Organizing Straight-Line Code）</h3>
 
 <p>依赖关系必须清晰明显。通子程序名、程序参数等实现。</p>
 
-<h2 id="tocAnchor-1-9-6">第15章 使用条件语句（Using Conditionals）</h2>
+<h3 id="tocAnchor-1-9-6">第15章 使用条件语句（Using Conditionals）</h3>
 
 <p>If-ElseIf-Else结构中，最后一个Else确保所有的情况都考虑到了。</p>
 
 <p>Case语句的顺序：首先按照频率从高到低，频率一样按照字母排列。</p>
 
-<h2 id="tocAnchor-1-9-7">第16章 控制循环（Controlling Loops）</h2>
+<h3 id="tocAnchor-1-9-7">第16章 控制循环（Controlling Loops）</h3>
 
 <p>使用带退出的循环，类似：</p>
 
 <div class="language-python highlighter-rouge"><pre class="highlight"><code>
 <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
 
-    <span class="c"># do something</span>
+    <span class="c">## do something</span>
 
     <span class="k">if</span> <span class="n">some_condition</span><span class="p">:</span>
 
         <span class="k">break</span>
 
-    <span class="c"># do something</span>
+    <span class="c">## do something</span>
 
 </code></pre>
 </div>
@@ -563,17 +563,17 @@
 
 <p>循环要尽可能短，嵌套限制在3层内。</p>
 
-<h2 id="tocAnchor-1-9-8">第17章 不常见的控制结构（Unusual Control Structures）</h2>
+<h3 id="tocAnchor-1-9-8">第17章 不常见的控制结构（Unusual Control Structures）</h3>
 
 <p>子程序中的多处返回（Multiple Returns）：如果能增强可读性，那么就使用return。</p>
 
 <p>小心谨慎地使用递归。</p>
 
-<h2 id="tocAnchor-1-9-9">第18章 表驱动法（Table-Driven Methods）</h2>
+<h3 id="tocAnchor-1-9-9">第18章 表驱动法（Table-Driven Methods）</h3>
 
 <p>使用一目了然的表来代替复杂的逻辑判断。</p>
 
-<h2 id="tocAnchor-1-9-10">第19章 一般控制问题（General Control Issues）</h2>
+<h3 id="tocAnchor-1-9-10">第19章 一般控制问题（General Control Issues）</h3>
 
 <p>Tips：</p>
 
@@ -606,9 +606,9 @@
 
 <p>控制结构域复杂度密切相关。人类大脑很难处理好超过5到9个的智力实体。</p>
 
-<h1 id="tocAnchor-1-20">第5部分 代码改善（Code Improvement）</h1>
+<h2 id="tocAnchor-1-20">第5部分 代码改善（Code Improvement）</h2>
 
-<h2 id="tocAnchor-1-20-1">第20章 软件质量概述（The Software-Quality Lanscape）</h2>
+<h3 id="tocAnchor-1-20-1">第20章 软件质量概述（The Software-Quality Lanscape）</h3>
 
 <p>质量不应该被认为是次要目标。组织本身必须向程序员们说明，质量应当放在第一位。</p>
 
@@ -624,7 +624,7 @@
 
 <p>更多的质量保证工作能降低错误率，但不会增加开发的总成本。编写无缺陷软件并不一定会比编写富含缺陷的软件花更多的时间。开发高质量代码最终并没有要求你付出更多，只是你需要对资源进行重新分配，以低廉的成本来防止缺陷的出现，从而避免代驾高昂的修正工作。</p>
 
-<h2 id="tocAnchor-1-20-2">第21章 协同构建（Collaborative Construction）</h2>
+<h3 id="tocAnchor-1-20-2">第21章 协同构建（Collaborative Construction）</h3>
 
 <p>协同开发实践往往能比测试发现更多的缺陷，并且更有效。</p>
 
@@ -666,7 +666,7 @@
   </li>
 </ul>
 
-<h2 id="tocAnchor-1-20-3">第22章 开发者测试（Developer Testing）</h2>
+<h3 id="tocAnchor-1-20-3">第22章 开发者测试（Developer Testing）</h3>
 
 <ul>
   <li>
@@ -688,7 +688,7 @@
 
 <p>软件质量的普遍原则：开发高质量的软件，比开发低质量软件然后修正的成本要低廉。</p>
 
-<h2 id="tocAnchor-1-20-4">第24章 重构（Refactoring）</h2>
+<h3 id="tocAnchor-1-20-4">第24章 重构（Refactoring）</h3>
 
 <p>重构策略：</p>
 
@@ -713,9 +713,9 @@
   </li>
 </ul>
 
-<h1 id="tocAnchor-1-25">第6部分 系统考虑（System Considerations）</h1>
+<h2 id="tocAnchor-1-25">第6部分 系统考虑（System Considerations）</h2>
 
-<h2 id="tocAnchor-1-25-1">第27章 程序规模对构建的影响（How Program Size Affects Construction）</h2>
+<h3 id="tocAnchor-1-25-1">第27章 程序规模对构建的影响（How Program Size Affects Construction）</h3>
 
 <p>随着项目规模的增大，更大一部分错误要归咎于需求和设计。</p>
 
@@ -774,7 +774,7 @@
 
 <p>程序员之间有着数量级的差异。即时个体程序员都一样，不同编程团队在软件质量和生产率上也有着相当大的差异。</p>
 
-<h1 id="tocAnchor-1-27">第29章 集成（Integration）</h1>
+<h2 id="tocAnchor-1-27">第29章 集成（Integration）</h2>
 
 <p>要点：</p>
 
@@ -796,15 +796,15 @@
   </li>
 </ul>
 
-<h1 id="tocAnchor-1-28">第7部分 软件工艺（Software Craftsmanship）</h1>
+<h2 id="tocAnchor-1-28">第7部分 软件工艺（Software Craftsmanship）</h2>
 
-<h2 id="tocAnchor-1-28-1">第32章 自说明代码（Self-Documenting Code）</h2>
+<h3 id="tocAnchor-1-28-1">第32章 自说明代码（Self-Documenting Code）</h3>
 
 <p>好代码本身就是最好的说明。如果代码太糟，需要大量注释，应先试着改进代码，直至无须过多注释为止。</p>
 
 <p>注释应说出代码无法说出的东西–例如概述或用意等信息。</p>
 
-<h2 id="tocAnchor-1-28-2">第33章 个人性格（Personal Character）</h2>
+<h3 id="tocAnchor-1-28-2">第33章 个人性格（Personal Character）</h3>
 
 <p>编程工作本质上是项无法监督的工作，因为没人真正清楚你正在做什么。</p>
 

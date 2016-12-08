@@ -1,7 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2016-12-07T20:50:59+08:00</updated><id>//</id><title type="html">做美好的人，做酷的事</title><subtitle>记录所学所想
-</subtitle><entry><title type="html">Mesos 源码学习(5) Slave Recovery</title><link href="/mesos/2016/12/07/05_slave_recovery.html" rel="alternate" type="text/html" title="Mesos 源码学习(5) Slave Recovery" /><published>2016-12-07T18:00:00+08:00</published><updated>2016-12-07T18:00:00+08:00</updated><id>/mesos/2016/12/07/05_slave_recovery</id><content type="html" xml:base="/mesos/2016/12/07/05_slave_recovery.html">&lt;h1 id=&quot;slave-recovery&quot;&gt;Slave Recovery&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2016-12-08T17:11:07+08:00</updated><id>//</id><title type="html">做美好的人，做酷的事</title><subtitle>记录所学所想
+</subtitle><entry><title type="html">Mesos 源码学习(6) Master 和 Slave 之间的消息</title><link href="/mesos/2016/12/08/06_messages_between_master_and_slave.html" rel="alternate" type="text/html" title="Mesos 源码学习(6) Master 和 Slave 之间的消息" /><published>2016-12-08T17:10:00+08:00</published><updated>2016-12-08T17:10:00+08:00</updated><id>/mesos/2016/12/08/06_messages_between_master_and_slave</id><content type="html" xml:base="/mesos/2016/12/08/06_messages_between_master_and_slave.html">&lt;p&gt;Slave 初始化的最后，会做 Recovery ，而 Recovery 的最后，则调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;detector-&amp;gt;detect()&lt;/code&gt; 方法找到
+leader master ，找到后，就回调 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave:detected&lt;/code&gt; 方法。&lt;/p&gt;
 
-&lt;p&gt;在 Slave 初始化的最后，会进行 recovery ：&lt;/p&gt;
+&lt;h2 id=&quot;slave--master-&quot;&gt;Slave 向 Master 注册&lt;/h2&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::statusUpdate&lt;/code&gt; 方法。&lt;/p&gt;</content><summary type="html">Slave 初始化的最后，会做 Recovery ，而 Recovery 的最后，则调用 detector-&amp;gt;detect() 方法找到
+leader master ，找到后，就回调 Slave:detected 方法。</summary></entry><entry><title type="html">Mesos 源码学习(5) Slave Recovery</title><link href="/mesos/2016/12/07/05_slave_recovery.html" rel="alternate" type="text/html" title="Mesos 源码学习(5) Slave Recovery" /><published>2016-12-07T18:00:00+08:00</published><updated>2016-12-07T18:00:00+08:00</updated><id>/mesos/2016/12/07/05_slave_recovery</id><content type="html" xml:base="/mesos/2016/12/07/05_slave_recovery.html">&lt;p&gt;在 Slave 初始化的最后，会进行 recovery ：&lt;/p&gt;
 
 &lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;initialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
 &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
@@ -17,7 +21,7 @@
 
 &lt;p&gt;其中 &lt;code class=&quot;highlighter-rouge&quot;&gt;async()&lt;/code&gt; 是 libprocess 提供的一种实现异步调用的方法。&lt;/p&gt;
 
-&lt;h2 id=&quot;state&quot;&gt;从硬盘拿到 State&lt;/h2&gt;
+&lt;h2 id=&quot;staterecover--state&quot;&gt;调用 state::recover 从硬盘拿到 State&lt;/h2&gt;
 
 &lt;p&gt;首先调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;state::recover&lt;/code&gt; 获得需要 recover 的信息，这些信息可能被 checkpointed 在硬盘上。
 该方法定义和实现在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/slave/state.hpp&lt;/code&gt; 和 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/slave/state.cpp&lt;/code&gt; 中。
@@ -135,7 +139,8 @@ Framework 的 work dir 和 meta dir 做一次垃圾回收，然后返回。&lt;/
 &lt;ol&gt;
   &lt;li&gt;一个 executor 可能 run 了很多次，而我们只需要恢复最近的一次，所以会先做一次 GC，清理除了最近一次
 run 的 executor work dir 和 executor meta dir&lt;/li&gt;
-  &lt;li&gt;根据 executorState 的 latest run，创建一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;Executor&lt;/code&gt; struct，恢复 executor process 的 PID。
+  &lt;li&gt;根据 executorState 的 latest run，创建一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;Executor&lt;/code&gt; struct，状态为默认的 &lt;code class=&quot;highlighter-rouge&quot;&gt;REGISTERING&lt;/code&gt;，
+然后恢复 executor process 的 PID。
 &lt;code class=&quot;highlighter-rouge&quot;&gt;Executor&lt;/code&gt; struct 也同样实现在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/slave/slave.cpp&lt;/code&gt; 中。&lt;/li&gt;
   &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;executor-&amp;gt;recoverTask&lt;/code&gt; 对 executor 的每一个 task 进行恢复&lt;/li&gt;
   &lt;li&gt;把这个 executor 放在 Framework 的 &lt;code class=&quot;highlighter-rouge&quot;&gt;executors&lt;/code&gt; 属性里面，
@@ -243,7 +248,7 @@ run 的 executor work dir 和 executor meta dir&lt;/li&gt;
 
 &lt;h3 id=&quot;recover-statusupdatemanager&quot;&gt;Recover StatusUpdateManager&lt;/h3&gt;
 
-&lt;p&gt;这是 Slave Recovery 的最后一步，代码是：&lt;/p&gt;
+&lt;p&gt;这是 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::recover&lt;/code&gt; 的最后一步，代码是：&lt;/p&gt;
 
 &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Future&amp;lt;Nothing&amp;gt; Slave::recover(const Result&amp;lt;state::State&amp;gt;&amp;amp; state)
 {
@@ -304,9 +309,318 @@ run 的 executor work dir 和 executor meta dir&lt;/li&gt;
 	&lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
 &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;</content><summary type="html">Slave Recovery</summary></entry><entry><title type="html">Mesos 源码学习(4) Mesos Slave 初始化</title><link href="/mesos/2016/12/06/04_slave_initialize.html" rel="alternate" type="text/html" title="Mesos 源码学习(4) Mesos Slave 初始化" /><published>2016-12-06T18:00:00+08:00</published><updated>2016-12-06T18:00:00+08:00</updated><id>/mesos/2016/12/06/04_slave_initialize</id><content type="html" xml:base="/mesos/2016/12/06/04_slave_initialize.html">&lt;h1 id=&quot;slave-process-&quot;&gt;Slave Process 的初始化&lt;/h1&gt;
+&lt;/div&gt;
 
-&lt;p&gt;Slave Process 初始化的代码在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/slave/slave.cpp&lt;/code&gt; 中：&lt;/p&gt;
+&lt;h2 id=&quot;slaverecover-1&quot;&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::_recover&lt;/code&gt;&lt;/h2&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::_recover&lt;/code&gt; 方法负责 Containerizer 的恢复。主要逻辑如下：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;针对 Slave 中记录的所有 framework 的所有 executor：
+    &lt;ol&gt;
+      &lt;li&gt;设置一个回调函数 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::executorTerminated&lt;/code&gt;，该回调函数在 executor 终结时被调用。&lt;/li&gt;
+      &lt;li&gt;如果 slave 启动时指定了 &lt;code class=&quot;highlighter-rouge&quot;&gt;--rocover=reconnect&lt;/code&gt;，就找到 executor process 的 PID，然后创建出一个
+&lt;code class=&quot;highlighter-rouge&quot;&gt;ReconnectExecutorMessage&lt;/code&gt; 消息，发送给 executor process 。&lt;/li&gt;
+      &lt;li&gt;如果 slave 启动时参数 &lt;code class=&quot;highlighter-rouge&quot;&gt;--recover&lt;/code&gt; 的值不是 &lt;code class=&quot;highlighter-rouge&quot;&gt;reconnect&lt;/code&gt;，就调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;_shutdownExecutor&lt;/code&gt; 把这个
+executor 关闭&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+  &lt;li&gt;在等待一段时间后，调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::reregisterExecutorTimeout&lt;/code&gt; 清理所有没有重新注册的 executor 。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;Future&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Nothing&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_recover&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// Alow HTTP based executors to subscribe after the
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// containerizer recovery is complete.
+&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;recoveryInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reconnect&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;foreachvalue&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frameworks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;foreachvalue&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Executor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;executors&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;c1&quot;&gt;// Set up callback for executor termination.
+&lt;/span&gt;      &lt;span class=&quot;n&quot;&gt;containerizer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;wait&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;containerId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;onAny&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;defer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
+                     &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;executorTerminated&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+                     &lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
+                     &lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+                     &lt;span class=&quot;n&quot;&gt;lambda&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+
+      &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;recover&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;reconnect&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	    &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+		&lt;span class=&quot;n&quot;&gt;ReconnectExecutorMessage&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mutable_slave_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;MergeFrom&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;send&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+		&lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+	  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	    &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+		&lt;span class=&quot;n&quot;&gt;_shutdownExecutor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+		&lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+	  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+	  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+	
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frameworks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;empty&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;recover&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;reconnect&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// Cleanup unregistered executors after a delay.
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;delay&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;EXECUTOR_REREGISTER_TIMEOUT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+          &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
+          &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reregisterExecutorTimeout&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// We set 'recovered' flag inside reregisterExecutorTimeout(),
+&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;// so that when the slave re-registers with master it can
+&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;// correctly inform the master about the launched tasks.
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;recoveryInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;recovered&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;future&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Nothing&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;executor-&quot;&gt;设置回调函数，当 executor 终结时调用&lt;/h3&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;containerizer-&amp;gt;wait&lt;/code&gt; 定义在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/slave/containerizer/containerizer.hpp&lt;/code&gt;，它会等待 executor 终结，
+然后做一些容器上下文的清理（destroy the containerized context）。&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;c1&quot;&gt;// Wait on the 'ContainerTermination'. If the executor terminates,
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// the containerizer should also destroy the containerized context.
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// Returns None if the container cannot be found.
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// The future may be failed if an error occurs during termination of
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// the executor or destruction of the container.
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;virtual&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Future&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Option&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mesos&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ContainerTermination&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;wait&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ContainerID&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;containerId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;这里传进去的回调函数是 &lt;code class=&quot;highlighter-rouge&quot;&gt;Self::executorTerminated&lt;/code&gt; ，它的主要逻辑是：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;做一些 termination 的检查。&lt;/li&gt;
+  &lt;li&gt;通过 &lt;code class=&quot;highlighter-rouge&quot;&gt;sendExecutorTerminatedStatusUpdate&lt;/code&gt; 方法把 executor 中所有未完成的 task 的状态设置为
+&lt;code class=&quot;highlighter-rouge&quot;&gt;TASK_FAILED&lt;/code&gt; 或者 &lt;code class=&quot;highlighter-rouge&quot;&gt;TASK_GONE&lt;/code&gt;。&lt;/li&gt;
+  &lt;li&gt;如果这是一个 Command Executor，则向 master 发送一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;ExitedExecutorMessage&lt;/code&gt; 消息。&lt;/li&gt;
+  &lt;li&gt;如果 slave 或者 framework 的状态是 &lt;code class=&quot;highlighter-rouge&quot;&gt;TERMINATING&lt;/code&gt;，即正在终结，就调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;removeExecutor&lt;/code&gt; 把
+executor 删掉。&lt;/li&gt;
+  &lt;li&gt;如果这个 executor 的 framework 已经没有其他 pending 的 executor 和 task 了，就调用
+&lt;code class=&quot;highlighter-rouge&quot;&gt;removeFramework&lt;/code&gt; 把这个 framework 删除。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Called by the isolator when an executor process terminates.
+&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;executorTerminated&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;FrameworkID&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frameworkId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ExecutorID&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;executorId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Future&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Option&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ContainerTermination&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;termination&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;Framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getFramework&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frameworkId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;Executor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getExecutor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;executorId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TERMINATING&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// Transition all live launched tasks.
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;foreach&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Task&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;launchedTasks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;values&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;protobuf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;isTerminalState&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;state&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()))&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;sendExecutorTerminatedStatusUpdate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;task_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;termination&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frameworkId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// Transition all queued tasks.
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;foreach&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;TaskInfo&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;queuedTasks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;values&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;sendExecutorTerminatedStatusUpdate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+          &lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;task_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;termination&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frameworkId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// Only send ExitedExecutorMessage if it is not a Command
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// Executor because the master doesn't store them; they are
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// generated by the slave.
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// TODO(vinod): Reliably forward this message to the master.
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;isCommandExecutor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;ExitedExecutorMessage&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mutable_slave_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;MergeFrom&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mutable_framework_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;MergeFrom&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frameworkId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mutable_executor_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;MergeFrom&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;executorId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;set_status&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;status&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;master&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;isSome&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;send&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;master&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// Remove the executor if either the slave or framework is
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// terminating or there are no incomplete tasks.
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;TERMINATING&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TERMINATING&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;incompleteTasks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;removeExecutor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;// Remove this framework if it has no pending executors and tasks.
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;executors&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;empty&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pending&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;empty&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;removeFramework&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;其中，&lt;code class=&quot;highlighter-rouge&quot;&gt;sendExecutorTerminatedStatusUpdate&lt;/code&gt; 负责发送 executor 已经终结的消息。
+该方法会判断 executor 的终结状态，然后创建出一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;StatusUpdate&lt;/code&gt; 消息，并最终发送给 master 。&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sendExecutorTerminatedStatusUpdate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;TaskID&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;taskId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Future&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Option&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ContainerTermination&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;termination&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;FrameworkID&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frameworkId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Executor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;statusUpdate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;protobuf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;createStatusUpdate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;frameworkId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;taskId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;state&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;TaskStatus&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SOURCE_SLAVE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;UUID&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;reason&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;executor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;UPID&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;其中，&lt;code class=&quot;highlighter-rouge&quot;&gt;protobuf::createStatusUpdate&lt;/code&gt; 创建一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;StatusUpdate&lt;/code&gt; 消息，该消息描述一个 task 的状态，
+定义在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/messages/messages.proto&lt;/code&gt; 中。&lt;/p&gt;
+
+&lt;p&gt;拿到消息后，调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::statusUpdate&lt;/code&gt; 方法把消息发送出去，最终会发给 master 。
+具体的发送机制参考
+&lt;a href=&quot;/mesos/2016/12/08/06_messages_between_master_and_slave.html&quot;&gt;Mesos 源码学习(6) Master 和 Slave 之间的消息&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;removeExecutor&lt;/code&gt; 负责把一个 Executor 从 Slave 中移除。主要逻辑就是做一些检查，进行垃圾回收，
+做 checkpoint ，最后把 executor 的数据结构从 Slave 中去除。&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;removeFramework&lt;/code&gt; 负责把一个 Framework 从 Slave 中移除。主要逻辑类似：做一些检查，进行垃圾回收，
+处理 framework 的数据结构。&lt;/p&gt;
+
+&lt;h3 id=&quot;recover--reconnect--executor-&quot;&gt;recover 为 reconnect 时，重新和 Executor 联系上&lt;/h3&gt;
+
+&lt;p&gt;在 recovery 的这一步，需要和 executor 再次联系上，于是会向 Executor 发送 &lt;code class=&quot;highlighter-rouge&quot;&gt;ReconnectExecutorMessage&lt;/code&gt;
+消息。&lt;/p&gt;
+
+&lt;h3 id=&quot;recover--reconnect--executor&quot;&gt;recover 不为 reconnect 时，关闭 Executor&lt;/h3&gt;
+
+&lt;p&gt;这是调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;_shutdownExecutor&lt;/code&gt; 把这个 executor 关闭。它做的事情就是向 Executor 发送一个
+&lt;code class=&quot;highlighter-rouge&quot;&gt;ShutdownExecutorMessage&lt;/code&gt; 消息，然后等待一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;executor_shutdown_grace_period&lt;/code&gt; 时间，如果 executor 
+还活着的话就把它 destroy 掉，最终执行 destroy 的是 &lt;code class=&quot;highlighter-rouge&quot;&gt;Containerizer-&amp;gt;destroy&lt;/code&gt; 方法，它会 kill 掉这个
+容器所有的进程，释放所有的资源。&lt;/p&gt;
+
+&lt;h3 id=&quot;executor&quot;&gt;清理没有及时重新注册的 Executor&lt;/h3&gt;
+
+&lt;p&gt;这里会先等待一段时间 &lt;code class=&quot;highlighter-rouge&quot;&gt;EXECUTOR_REREGISTER_TIMEOUT&lt;/code&gt; ，这个时间写死为2s，然后调用 
+&lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::reregisterExecutorTimeout&lt;/code&gt; 清理所有没有重新注册的 executor 。&lt;/p&gt;
+
+&lt;p&gt;在之前的 recover 过程中，所有 executor 的状态都是默认的 &lt;code class=&quot;highlighter-rouge&quot;&gt;REGISTERING&lt;/code&gt;，所以这里会遍历所有的
+Executor ，如果他们的状态仍然还是 &lt;code class=&quot;highlighter-rouge&quot;&gt;REGISTERING&lt;/code&gt;，那就说明他们没有及时注册。
+对于这些 Executor，会有如下操作：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Containerizer-&amp;gt;destroy&lt;/code&gt; 方法把它终结掉。&lt;/li&gt;
+  &lt;li&gt;executor 状态置为 &lt;code class=&quot;highlighter-rouge&quot;&gt;Executor::TERMINATING&lt;/code&gt;，创建一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;ContainerTermination&lt;/code&gt; 结构，
+设置给 &lt;code class=&quot;highlighter-rouge&quot;&gt;executor-&amp;gt;pendingTermination&lt;/code&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;最后，会发一个消息，说 recovery 过程完成了：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;c1&quot;&gt;// Signal the end of recovery.
+&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;recoveryInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;recovered&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;set&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Nothing&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;slaverecover-2&quot;&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::__recover&lt;/code&gt;&lt;/h2&gt;
+
+&lt;p&gt;当 recover 完成时，会调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::__recover&lt;/code&gt; 方法，主要逻辑是：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;找到之前的 slave 进程的目录，做垃圾回收；&lt;/li&gt;
+  &lt;li&gt;如果启动参数 &lt;code class=&quot;highlighter-rouge&quot;&gt;--recover=cleanup&lt;/code&gt;，则调用 libprocess 的 &lt;code class=&quot;highlighter-rouge&quot;&gt;terminate&lt;/code&gt; 方法终结 slave process ；&lt;/li&gt;
+  &lt;li&gt;如果启动参数 &lt;code class=&quot;highlighter-rouge&quot;&gt;--recover=reconnect&lt;/code&gt;，则：
+    &lt;ol&gt;
+      &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;detector-&amp;gt;detect()&lt;/code&gt; 找到 leader master，找到后调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::detected&lt;/code&gt;，具体参考
+&lt;a href=&quot;/mesos/2016/12/08/06_messages_between_master_and_slave.html&quot;&gt;Mesos 源码学习(6) Master 和 Slave 之间的消息&lt;/a&gt;。&lt;/li&gt;
+      &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;forwardOversubscribed()&lt;/code&gt; 转发超发的资源，超发的资源从 ResourceEstimator 获取，经过一些
+计算后生成一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;UpdateSlaveMessage&lt;/code&gt; 消息发送给 master。&lt;/li&gt;
+      &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::qosCorrections()&lt;/code&gt; 来启动 QoS Controller。该方法会自己调用自己实现不断地做检查，
+它会调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;qosController-&amp;gt;corrections()&lt;/code&gt; 的到一个 Correction 的列表，每个 Correction 表示对
+某个 Executor 所采取的动作，杀还是不杀，如果决定要杀, slave 就会把它杀掉。&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__recover&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Future&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Nothing&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;future&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// Schedule all old slave directories for garbage collection.
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;string&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;directory&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;work_dir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;slaves&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;Try&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;list&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;string&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;entries&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;os&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;directory&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;entries&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;isSome&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;foreach&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;string&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;entry&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;entries&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;string&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;directory&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;entry&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+      &lt;span class=&quot;c1&quot;&gt;// Ignore non-directory entries.
+&lt;/span&gt;      &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;os&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;stat&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;isdir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;continue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+      &lt;span class=&quot;c1&quot;&gt;// We garbage collect a directory if either the slave has not
+&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;// recovered its id (hence going to get a new id when it
+&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;// registers with the master) or if it is an old work directory.
+&lt;/span&gt;      &lt;span class=&quot;n&quot;&gt;SlaveID&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;slaveId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;slaveId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;set_value&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;entry&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;has_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;slaveId&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()))&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;// GC the slave work directory.
+&lt;/span&gt;        &lt;span class=&quot;n&quot;&gt;os&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;utime&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// Update the modification time.
+&lt;/span&gt;        &lt;span class=&quot;n&quot;&gt;garbageCollect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+        &lt;span class=&quot;c1&quot;&gt;// GC the slave meta directory.
+&lt;/span&gt;        &lt;span class=&quot;n&quot;&gt;path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;paths&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getSlavePath&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;metaDir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;slaveId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;os&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;exists&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+          &lt;span class=&quot;n&quot;&gt;os&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;utime&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// Update the modification time.
+&lt;/span&gt;          &lt;span class=&quot;n&quot;&gt;garbageCollect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;recover&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;reconnect&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;DISCONNECTED&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// Start detecting masters.
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;detection&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;detector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;detect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;onAny&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;defer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;detected&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lambda&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// Forward oversubscribed resources.
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;forwardOversubscribed&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// Start acting on correction from QoS Controller.
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;qosCorrections&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// Slave started in cleanup mode.
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;CHECK_EQ&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;cleanup&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;recover&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;TERMINATING&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frameworks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;empty&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;terminate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// If there are active executors/frameworks, the slave will
+&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;// shutdown when all the executors are terminated. Note that
+&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;// the executors are guaranteed to terminate because they
+&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;// are sent shutdown signal in '_recover()' which results in
+&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;// 'Containerizer::destroy()' being called if the termination
+&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;// doesn't happen within a timeout.
+&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;recoveryInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;recovered&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;set&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Nothing&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// Signal recovery.
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;slave-recovery-&quot;&gt;Slave Recovery 结束&lt;/h2&gt;
+
+&lt;p&gt;到此，Slave Recovery 的过程结束。
+正常的逻辑下（&lt;code class=&quot;highlighter-rouge&quot;&gt;--recover=reconnect&lt;/code&gt;），Slave 开始和 Master 进行通信。&lt;/p&gt;</content><summary type="html">在 Slave 初始化的最后，会进行 recovery ：</summary></entry><entry><title type="html">Mesos 源码学习(4) Mesos Slave 初始化</title><link href="/mesos/2016/12/06/04_slave_initialize.html" rel="alternate" type="text/html" title="Mesos 源码学习(4) Mesos Slave 初始化" /><published>2016-12-06T18:00:00+08:00</published><updated>2016-12-06T18:00:00+08:00</updated><id>/mesos/2016/12/06/04_slave_initialize</id><content type="html" xml:base="/mesos/2016/12/06/04_slave_initialize.html">&lt;p&gt;Slave Process 初始化的代码在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/slave/slave.cpp&lt;/code&gt; 中：&lt;/p&gt;
 
 &lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;initialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
 &lt;span class=&quot;p&quot;&gt;{...}&lt;/span&gt;
@@ -595,14 +909,12 @@ Mesos Slave 会运行在这些 cgroup 子系统里面。主要是用于资源监
 
 &lt;h2 id=&quot;recovery&quot;&gt;异步地执行 recovery&lt;/h2&gt;
 
-&lt;p&gt;详见 &lt;a href=&quot;/mesos/2016/12/07/05_slave_recovery.html&quot;&gt;Slave Recovery&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;详见 &lt;a href=&quot;/mesos/2016/12/07/05_slave_recovery.html&quot;&gt;Mesos 源码学习(5) Slave Recovery&lt;/a&gt;。&lt;/p&gt;
 
-&lt;h2 id=&quot;slave-process--1&quot;&gt;Slave Process 初始化完成&lt;/h2&gt;
+&lt;h2 id=&quot;slave-process-&quot;&gt;Slave Process 初始化完成&lt;/h2&gt;
 
 &lt;p&gt;至此，Slave Process 完成了初始化。
-接下来程序就依靠之前用 libprocess 的 &lt;code class=&quot;highlighter-rouge&quot;&gt;install&lt;/code&gt; 和 &lt;code class=&quot;highlighter-rouge&quot;&gt;route&lt;/code&gt; 方法注册的各个处理函数来运行了。&lt;/p&gt;</content><summary type="html">Slave Process 的初始化</summary></entry><entry><title type="html">Mesos 源码学习(3) Mesos Slave 的启动</title><link href="/mesos/2016/12/06/03_slave_start.html" rel="alternate" type="text/html" title="Mesos 源码学习(3) Mesos Slave 的启动" /><published>2016-12-06T16:00:00+08:00</published><updated>2016-12-06T16:00:00+08:00</updated><id>/mesos/2016/12/06/03_slave_start</id><content type="html" xml:base="/mesos/2016/12/06/03_slave_start.html">&lt;h1 id=&quot;slave-&quot;&gt;Slave 的启动&lt;/h1&gt;
-
-&lt;p&gt;Mesos Slave 启动相关的代码在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/slave/main.cpp&lt;/code&gt; 中。
+接下来程序就依靠之前用 libprocess 的 &lt;code class=&quot;highlighter-rouge&quot;&gt;install&lt;/code&gt; 和 &lt;code class=&quot;highlighter-rouge&quot;&gt;route&lt;/code&gt; 方法注册的各个处理函数来运行了。&lt;/p&gt;</content><summary type="html">Slave Process 初始化的代码在 src/slave/slave.cpp 中：</summary></entry><entry><title type="html">Mesos 源码学习(3) Mesos Slave 的启动</title><link href="/mesos/2016/12/06/03_slave_start.html" rel="alternate" type="text/html" title="Mesos 源码学习(3) Mesos Slave 的启动" /><published>2016-12-06T16:00:00+08:00</published><updated>2016-12-06T16:00:00+08:00</updated><id>/mesos/2016/12/06/03_slave_start</id><content type="html" xml:base="/mesos/2016/12/06/03_slave_start.html">&lt;p&gt;Mesos Slave 启动相关的代码在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/slave/main.cpp&lt;/code&gt; 中。
 很多过程和 master 的启动过程类似。&lt;/p&gt;
 
 &lt;h2 id=&quot;section&quot;&gt;解析命令行参数&lt;/h2&gt;
@@ -896,9 +1208,8 @@ Mesos Slave 会运行在这些 cgroup 子系统里面。主要是用于资源监
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 
-&lt;p&gt;接下来就是 Slave Process 的初始化。&lt;/p&gt;</content><summary type="html">Slave 的启动</summary></entry><entry><title type="html">Mesos 源码学习(2) Mesos Master 初始化</title><link href="/mesos/2016/12/06/02_master_initialize.html" rel="alternate" type="text/html" title="Mesos 源码学习(2) Mesos Master 初始化" /><published>2016-12-06T12:00:00+08:00</published><updated>2016-12-06T12:00:00+08:00</updated><id>/mesos/2016/12/06/02_master_initialize</id><content type="html" xml:base="/mesos/2016/12/06/02_master_initialize.html">&lt;h1 id=&quot;master-process-&quot;&gt;Master Process 的初始化&lt;/h1&gt;
-
-&lt;p&gt;Master 初始化的代码实现在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/master/master.cpp&lt;/code&gt; 中：&lt;/p&gt;
+&lt;p&gt;接下来就是 Slave Process 的初始化。&lt;/p&gt;</content><summary type="html">Mesos Slave 启动相关的代码在 src/slave/main.cpp 中。
+很多过程和 master 的启动过程类似。</summary></entry><entry><title type="html">Mesos 源码学习(2) Mesos Master 初始化</title><link href="/mesos/2016/12/06/02_master_initialize.html" rel="alternate" type="text/html" title="Mesos 源码学习(2) Mesos Master 初始化" /><published>2016-12-06T12:00:00+08:00</published><updated>2016-12-06T12:00:00+08:00</updated><id>/mesos/2016/12/06/02_master_initialize</id><content type="html" xml:base="/mesos/2016/12/06/02_master_initialize.html">&lt;p&gt;Master 初始化的代码实现在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/master/master.cpp&lt;/code&gt; 中：&lt;/p&gt;
 
 &lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Master&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;initialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
 &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
@@ -1169,9 +1480,7 @@ Mesos Slave 会运行在这些 cgroup 子系统里面。主要是用于资源监
 
 &lt;h2 id=&quot;section-2&quot;&gt;完成初始化&lt;/h2&gt;
 
-&lt;p&gt;至此，master 已经完成初始化，master process 开始工作，接受并处理来自其他组件或 API 的消息。&lt;/p&gt;</content><summary type="html">Master Process 的初始化</summary></entry><entry><title type="html">Mesos 源码学习(1) Mesos Master 的启动</title><link href="/mesos/2016/12/06/01_master_start.html" rel="alternate" type="text/html" title="Mesos 源码学习(1) Mesos Master 的启动" /><published>2016-12-06T11:00:00+08:00</published><updated>2016-12-06T11:00:00+08:00</updated><id>/mesos/2016/12/06/01_master_start</id><content type="html" xml:base="/mesos/2016/12/06/01_master_start.html">&lt;h1 id=&quot;master-&quot;&gt;Master 的启动&lt;/h1&gt;
-
-&lt;p&gt;Mesos Master 启动相关的代码在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/master/main.cpp&lt;/code&gt; 中。&lt;/p&gt;
+&lt;p&gt;至此，master 已经完成初始化，master process 开始工作，接受并处理来自其他组件或 API 的消息。&lt;/p&gt;</content><summary type="html">Master 初始化的代码实现在 src/master/master.cpp 中：</summary></entry><entry><title type="html">Mesos 源码学习(1) Mesos Master 的启动</title><link href="/mesos/2016/12/06/01_master_start.html" rel="alternate" type="text/html" title="Mesos 源码学习(1) Mesos Master 的启动" /><published>2016-12-06T11:00:00+08:00</published><updated>2016-12-06T11:00:00+08:00</updated><id>/mesos/2016/12/06/01_master_start</id><content type="html" xml:base="/mesos/2016/12/06/01_master_start.html">&lt;p&gt;Mesos Master 启动相关的代码在 &lt;code class=&quot;highlighter-rouge&quot;&gt;src/master/main.cpp&lt;/code&gt; 中。&lt;/p&gt;
 
 &lt;h2 id=&quot;flags-&quot;&gt;解析 flags 参数&lt;/h2&gt;
 
@@ -1733,7 +2042,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：&lt;
 
 &lt;p&gt;主要工作就是把一些信息存到 &lt;code class=&quot;highlighter-rouge&quot;&gt;info_&lt;/code&gt; 中，&lt;code class=&quot;highlighter-rouge&quot;&gt;info_&lt;/code&gt; 的类型是 &lt;code class=&quot;highlighter-rouge&quot;&gt;MasterInfo&lt;/code&gt;。&lt;/p&gt;
 
-&lt;p&gt;接下来，开始 master process 的初始化。&lt;/p&gt;</content><summary type="html">Master 的启动</summary></entry><entry><title type="html">Mesos 源码学习(0) libprocess 简介</title><link href="/mesos/2016/12/05/00_libprocess.html" rel="alternate" type="text/html" title="Mesos 源码学习(0) libprocess 简介" /><published>2016-12-05T10:00:00+08:00</published><updated>2016-12-05T10:00:00+08:00</updated><id>/mesos/2016/12/05/00_libprocess</id><content type="html" xml:base="/mesos/2016/12/05/00_libprocess.html">&lt;h1 id=&quot;libprocess&quot;&gt;什么是 &lt;code class=&quot;highlighter-rouge&quot;&gt;libprocess&lt;/code&gt;&lt;/h1&gt;
+&lt;p&gt;接下来，开始 master process 的初始化。&lt;/p&gt;</content><summary type="html">Mesos Master 启动相关的代码在 src/master/main.cpp 中。</summary></entry><entry><title type="html">Mesos 源码学习(0) libprocess 简介</title><link href="/mesos/2016/12/05/00_libprocess.html" rel="alternate" type="text/html" title="Mesos 源码学习(0) libprocess 简介" /><published>2016-12-05T10:00:00+08:00</published><updated>2016-12-05T10:00:00+08:00</updated><id>/mesos/2016/12/05/00_libprocess</id><content type="html" xml:base="/mesos/2016/12/05/00_libprocess.html">&lt;h2 id=&quot;libprocess-&quot;&gt;Libprocess 特性&lt;/h2&gt;
 
 &lt;p&gt;Mesos 底层依赖于 libprocess 库，该库用 C++ 实现了 Actor 模式，不过它不叫 actor，而叫做 process。&lt;/p&gt;
 
@@ -1747,7 +2056,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：&lt;
 &lt;p&gt;Libprocess 还提供了不同服务之间远程调用方式，依赖于 HTTP。
 也就是每个 process 会监听一个端口，提供 HTTP 服务，调用方最终是通过发送一个 HTTP 请求来调用，返回值也是通过 HTTP 返回来获得。&lt;/p&gt;
 
-&lt;h2 id=&quot;section&quot;&gt;没有异常&lt;/h2&gt;
+&lt;h3 id=&quot;section&quot;&gt;没有异常&lt;/h3&gt;
 
 &lt;p&gt;通过 &lt;code class=&quot;highlighter-rouge&quot;&gt;Try&amp;lt;T&amp;gt;&lt;/code&gt; 代替异常：&lt;/p&gt;
 
@@ -1761,7 +2070,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：&lt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 
-&lt;h2 id=&quot;null&quot;&gt;没有 NULL&lt;/h2&gt;
+&lt;h3 id=&quot;null&quot;&gt;没有 NULL&lt;/h3&gt;
 
 &lt;p&gt;通过 &lt;code class=&quot;highlighter-rouge&quot;&gt;Option&amp;lt;T&amp;gt;&lt;/code&gt; 代替 NULL：&lt;/p&gt;
 
@@ -1775,7 +2084,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：&lt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 
-&lt;h2 id=&quot;section-1&quot;&gt;不需要自己管理内存&lt;/h2&gt;
+&lt;h3 id=&quot;section-1&quot;&gt;不需要自己管理内存&lt;/h3&gt;
 
 &lt;p&gt;通过使用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Owned&amp;lt;T&amp;gt;&lt;/code&gt;:&lt;/p&gt;
 
@@ -1786,7 +2095,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：&lt;
 
 &lt;p&gt;Libprocess 库中通过“引用计数的指针(reference counted pointers)”来自己实现内存管理，不需要用户操心。&lt;/p&gt;
 
-&lt;h2 id=&quot;tryt--optiont--resultt&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Try&amp;lt;T&amp;gt;&lt;/code&gt; 和 &lt;code class=&quot;highlighter-rouge&quot;&gt;Option&amp;lt;T&amp;gt;&lt;/code&gt; 可以组合成 &lt;code class=&quot;highlighter-rouge&quot;&gt;Result&amp;lt;T&amp;gt;&lt;/code&gt;&lt;/h2&gt;
+&lt;h3 id=&quot;tryt--optiont--resultt&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Try&amp;lt;T&amp;gt;&lt;/code&gt; 和 &lt;code class=&quot;highlighter-rouge&quot;&gt;Option&amp;lt;T&amp;gt;&lt;/code&gt; 可以组合成 &lt;code class=&quot;highlighter-rouge&quot;&gt;Result&amp;lt;T&amp;gt;&lt;/code&gt;&lt;/h3&gt;
 
 &lt;p&gt;基本上，&lt;code class=&quot;highlighter-rouge&quot;&gt;Result&amp;lt;T&amp;gt;&lt;/code&gt; 相当于 &lt;code class=&quot;highlighter-rouge&quot;&gt;Try&amp;lt;Option&amp;lt;T&amp;gt;&amp;gt;&lt;/code&gt;。例如：&lt;/p&gt;
 
@@ -1805,7 +2114,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：&lt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 
-&lt;h1 id=&quot;process-&quot;&gt;process 特性&lt;/h1&gt;
+&lt;h2 id=&quot;process-&quot;&gt;process 特性&lt;/h2&gt;
 
 &lt;p&gt;Libprocess 中的 Actor 叫做 &lt;code class=&quot;highlighter-rouge&quot;&gt;process&lt;/code&gt;，可以向一个 process 发送各种消息。主要特性：&lt;/p&gt;
 &lt;ol&gt;
@@ -1822,7 +2131,7 @@ Allocator 对外的服务，都是通过这个 wrapper 提供的。比如：&lt;
 a process at a time so no need for per process synchronization).&lt;/p&gt;
 &lt;/blockquote&gt;
 
-&lt;h2 id=&quot;process--1&quot;&gt;一个 process 的生命周期&lt;/h2&gt;
+&lt;h3 id=&quot;process--1&quot;&gt;一个 process 的生命周期&lt;/h3&gt;
 
 &lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;using&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;namespace&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
 
@@ -1838,7 +2147,7 @@ a process at a time so no need for per process synchronization).&lt;/p&gt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 
-&lt;h2 id=&quot;pid&quot;&gt;PID&lt;/h2&gt;
+&lt;h3 id=&quot;pid&quot;&gt;PID&lt;/h3&gt;
 
 &lt;p&gt;每一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;process&lt;/code&gt; 拥有一个 PID，libprocess 的使用者只需要知道这个 PID，而不需要维护这个 process 的引用（指针）。&lt;/p&gt;
 
@@ -2098,7 +2407,7 @@ way, using &lt;code class=&quot;highlighter-rouge&quot;&gt;defer&lt;/code&gt; is
   &lt;li&gt;&lt;a href=&quot;https://www.dropbox.com/s/9lgwzgy74gxn0w9/libprocess.pdf?dl=0&quot;&gt;libprocess&lt;/a&gt;： 这是 libprocess 和 Mesos 原作者 Benjamin Hindman 对于 libprocess 的介绍。&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://codetrips.com/2015/06/28/581/&quot;&gt;libprocess – an Actor-based inter-process communication library&lt;/a&gt;: 提供了一个例子。&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://github.com/apache/mesos/blob/master/3rdparty/libprocess/README.md&quot;&gt;Libprocess Developer Guide&lt;/a&gt;: 里面详细介绍了 &lt;code class=&quot;highlighter-rouge&quot;&gt;defer&lt;/code&gt; 使用。&lt;/li&gt;
-&lt;/ul&gt;</content><summary type="html">什么是 libprocess</summary></entry><entry><title type="html">《重新定义团队：谷歌如何工作》读书笔记</title><link href="/reading/2016/12/04/%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%9B%A2%E9%98%9F-%E8%B0%B7%E6%AD%8C%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html" rel="alternate" type="text/html" title="《重新定义团队：谷歌如何工作》读书笔记" /><published>2016-12-04T11:10:00+08:00</published><updated>2016-12-04T11:10:00+08:00</updated><id>/reading/2016/12/04/%E3%80%8A%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%9B%A2%E9%98%9F:%E8%B0%B7%E6%AD%8C%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E3%80%8B%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0</id><content type="html" xml:base="/reading/2016/12/04/%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%9B%A2%E9%98%9F-%E8%B0%B7%E6%AD%8C%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html">&lt;p&gt;写于 2016-12-04 。&lt;/p&gt;
+&lt;/ul&gt;</content><summary type="html">Libprocess 特性</summary></entry><entry><title type="html">《重新定义团队：谷歌如何工作》读书笔记</title><link href="/reading/2016/12/04/%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%9B%A2%E9%98%9F-%E8%B0%B7%E6%AD%8C%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html" rel="alternate" type="text/html" title="《重新定义团队：谷歌如何工作》读书笔记" /><published>2016-12-04T11:10:00+08:00</published><updated>2016-12-04T11:10:00+08:00</updated><id>/reading/2016/12/04/%E3%80%8A%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%9B%A2%E9%98%9F:%E8%B0%B7%E6%AD%8C%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E3%80%8B%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0</id><content type="html" xml:base="/reading/2016/12/04/%E9%87%8D%E6%96%B0%E5%AE%9A%E4%B9%89%E5%9B%A2%E9%98%9F-%E8%B0%B7%E6%AD%8C%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html">&lt;p&gt;写于 2016-12-04 。&lt;/p&gt;
 
 &lt;p&gt;这本书的作者拉兹洛·博克是 Google 的首席人才官，他试图通过这本书告诉读者 Google 是如何做到把最优秀的人才聚集在一起并让他们开心工作的。&lt;/p&gt;
 
@@ -2292,43 +2601,4 @@ way, using &lt;code class=&quot;highlighter-rouge&quot;&gt;defer&lt;/code&gt; is
 
 &lt;blockquote&gt;
   &lt;p&gt;所谓英雄，就是超越了阶级出身、超越了周围环境、超越了性格局限，拒绝按照任何设定好的程序行事，不能被大数据预测，给世界带来惊喜，最不像机器人的人。&lt;/p&gt;
-&lt;/blockquote&gt;</content><summary type="html">写于 2016-12-03 。</summary></entry><entry><title type="html">《卓有成效的管理者》读书笔记</title><link href="/reading/2016/11/20/%E5%8D%93%E6%9C%89%E6%88%90%E6%95%88%E7%9A%84%E7%AE%A1%E7%90%86%E8%80%85-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html" rel="alternate" type="text/html" title="《卓有成效的管理者》读书笔记" /><published>2016-11-20T21:12:08+08:00</published><updated>2016-11-20T21:12:08+08:00</updated><id>/reading/2016/11/20/%E3%80%8A%E5%8D%93%E6%9C%89%E6%88%90%E6%95%88%E7%9A%84%E7%AE%A1%E7%90%86%E8%80%85%E3%80%8B%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0</id><content type="html" xml:base="/reading/2016/11/20/%E5%8D%93%E6%9C%89%E6%88%90%E6%95%88%E7%9A%84%E7%AE%A1%E7%90%86%E8%80%85-%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0.html">&lt;p&gt;写于 2016-11-20。&lt;/p&gt;
-
-&lt;p&gt;我认为管理的核心在于&lt;strong&gt;找到并扩大人与人之间的共同利益&lt;/strong&gt;。&lt;/p&gt;
-
-&lt;p&gt;创始人的个人利益可能和公司的利益有 80% 的重合度，而普通基层员工和公司的利益重合度可能只有 30%。好的项目当然会给公司带来收益，这就是共同利益，但除此之外，员工更关心的是项目给自己个人带来的收益，薪水、成就感、职称、个人能力等等。如果一件事情能给员工带来很大的切身利益，那员工就会去做，哪怕这件事情对员工的经理而言没有什么效益，对公司而言甚至可能是有害的。大公司的发展往往会失控，自然而然地分崩离析，原因之一就在于随着人越来越多，部门与公司、经理与总监、员工与经理、基层与高层之间的利益重合度越来越低。&lt;/p&gt;
-
-&lt;p&gt;公司与员工，上级与下级的关系，形式上是雇佣，实质上是合作。大家分工协作，各自从中得到自己想要的利益。员工的工作态度消极，说明好好工作能给员工自己带来的东西太少，他觉得上班仅仅是为了老板打工，仅仅是为了拿点薪水。有时员工觉得自己在努力工作创造了很多价值，但经理觉得员工拿出来的结果根本不是自己想要的东西，这就是因为经理和员工之间没有就他们的共同利益达成一致。所谓将心比心，换位思考，目的就是理解并找到对方的利益点。&lt;/p&gt;
-
-&lt;p&gt;围绕着扩大共同利益这个核心，可以发展出各种管理者之道。彼得·德鲁克在《卓有成效的管理者》一书中，提出了优秀管理者应该具备的 5 种素质。尽管从现代的眼光来看，这些素质已经成了大家耳熟能详的一些观点，但现实工作中，能做到这 5 点的并不多。而且这些素质，不只是对管理者有效，对于普通的员工，对于所有的知识性工作者，都很有指导意义。好的东西不会轻易过时。&lt;/p&gt;
-
-&lt;h3 id=&quot;section&quot;&gt;第一，掌控自己的时间。&lt;/h3&gt;
-
-&lt;p&gt;每个人最稀缺的资源就是自己的时间，高效地工作，用节省下来的时间来关注家庭、提高自己或者是从事任何自己感兴趣的事情，这都比低效率的工作有意义得多。说到底，对于绝大部分人来说，工作是生活的一部分，本质上是希望通过工作让自己的生活得更好，无论是物质报酬还是成就感，都是为了让有限的人生更精彩更幸福。&lt;/p&gt;
-
-&lt;p&gt;要掌控自己的时间，首先就要知道自己的时间花在了什么地方。我们都知道自己的世界应该怎么去用，但往往不知道我们的时间到底是怎么被用掉的。一旦知道了真相，调整就有据可循了。最有效的办法就是记录时间的使用情况，关键在于及时和客观。做一件事情的当下，就把这件事情以及花费的时间记录下来。不要依靠会议，大脑是不可靠的。这会是一件有些枯燥的事，而一旦坚持足够长的时间，就能由此对自己有更清楚的认识，接下啦的决策、计划、调整也会更符合自己的特质，因而会更有效。&lt;/p&gt;
-
-&lt;p&gt;今年我的个人目标就是每天写日记，记录自己每一天的所做所学所想。通过这个简单的活动，我自己就能明显地体会到对自己的认识更深入了，自己更变得更上进、也更容易发现并且纠正那些不对的地方。但目前写日记靠的是每天结束后的回忆，这种方式还是不够及时。准备试一试每天做事情时马上记录，一天结束后再回顾总结的方式。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-1&quot;&gt;第二，把眼光集中在贡献上。&lt;/h3&gt;
-
-&lt;p&gt;优秀的管理者，能够跳出事务本身的维度来看待一件事。这要求梳理掉那些错综复杂的细节，让背后的本质暴露出来，这就是最终的贡献。一件事该不该做，做得怎么样，就看这最终的贡献怎么样。&lt;/p&gt;
-
-&lt;p&gt;平时的工作中，往往是做得太多，想的太少，结果白费了很多力气在那些本质上没什么贡献的事情上。包括学习一个东西，最有效的方式是刻意练习，而不是简单重复。这事实上也是要求我们把眼光集中在贡献上，真正有贡献的是刻意的专门设计的练习以及及时的反馈，去关注这些事情，其他的都不重要。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-2&quot;&gt;第三，用人所长。&lt;/h3&gt;
-
-&lt;p&gt;这一点中国历史上有太多例子了。知人善任、因材施教，关键就在于会看人，大多数人，总需要一些时间的共处，才知道一个人的长处短处。慧眼识人，依靠的就是平时一点一点的观察和思考，这其实也是一种训练，越到后来越能在更短的时间看清一个人。用人所长要求领导者能灵活应变，眼光集中在贡献上，就能知道什么东西能变，应该怎么变才能让一个人发挥出最大的能力。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-3&quot;&gt;第四，要事优先。&lt;/h3&gt;
-
-&lt;p&gt;这一点和第二点类似。最难得部分在于说“不”。不仅仅是拒绝，有时候也是放弃。但为了做好最重要的时，这些拒绝和放弃都是值得的，最终得到的利益也会更大。还是那句话，做一件事情时，应该多花时间想一想，到底有多大的意义。如果确定有意义，那就花更多的时间把它做好，哪怕为此放弃掉其他同样有所收益，但相比不那么重要的事。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-4&quot;&gt;第五，做决策。&lt;/h3&gt;
-
-&lt;p&gt;领导者最核心的工作就是做决策。好的决策并没有什么有据可循的方式方法，但也有一些共通之处：
-	1. 透过现象看到本质。与其做 100 个针对 100 个事件的决策，不如好好分析一下这些事件是不是只是表象，是不是背后有一个更深刻的原因。
-	2. 承认自己的无知。可怕的不是不懂，而是自以为很懂实际上不懂。好的决策往往需要很多方面的知识，人有限的精力不可能完全掌握。
-	3. 听取各方面的意见。人不可避免地会有偏见。所以要听取各种不同的声音，尤其是与自己的理解对立的声音。有些声音有理有据，有些声音很片面或者根本是错误的，这时不要简单地抛弃这些声音，而是应该想一想，是什么样的原因，导致这些人产生这样的看法。&lt;/p&gt;
-
-&lt;p&gt;管理学有很多很空的东西，但也有一些真知灼见。但总体而言，这是一门依靠实践的学问，在实际的工作中多看多想，才能发展出最合适的管理方法。&lt;/p&gt;</content><summary type="html">写于 2016-11-20。</summary></entry></feed>
+&lt;/blockquote&gt;</content><summary type="html">写于 2016-12-03 。</summary></entry></feed>

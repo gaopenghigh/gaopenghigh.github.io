@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Mesos 源码学习(2) Mesos Master 初始化</title>
-  <meta name="description" content="Master Process 的初始化">
+  <meta name="description" content="Master 初始化的代码实现在 src/master/master.cpp 中：">
 
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="/mesos/2016/12/06/02_master_initialize.html">
@@ -84,45 +84,38 @@
           </div>
           <ul>
             <li class="toc_level-1 toc_section-1">
-              <a href="#tocAnchor-1-1"><span class="tocnumber">1</span> <span class="toctext">Master Process 的初始化</span></a>
-              <ul>
-                <li class="toc_level-2 toc_section-2">
-                  <a href="#tocAnchor-1-1-1"><span class="tocnumber">1.1</span> <span class="toctext">参数合法性检查</span></a>
-                </li>
-                <li class="toc_level-2 toc_section-3">
-                  <a href="#tocAnchor-1-1-2"><span class="tocnumber">1.2</span> <span class="toctext">权限相关的初始化</span></a>
-                </li>
-                <li class="toc_level-2 toc_section-4">
-                  <a href="#tocAnchor-1-1-3"><span class="tocnumber">1.3</span> <span class="toctext">初始化 framework 的 rate limit</span></a>
-                </li>
-                <li class="toc_level-2 toc_section-5">
-                  <a href="#tocAnchor-1-1-4"><span class="tocnumber">1.4</span> <span class="toctext">初始化 role 和 weight</span></a>
-                </li>
-                <li class="toc_level-2 toc_section-6">
-                  <a href="#tocAnchor-1-1-5"><span class="tocnumber">1.5</span> <span class="toctext">初始化 allocator</span></a>
-                </li>
-                <li class="toc_level-2 toc_section-7">
-                  <a href="#tocAnchor-1-1-6"><span class="tocnumber">1.6</span> <span class="toctext">发送 offer 的回调方法</span></a>
-                </li>
-                <li class="toc_level-2 toc_section-8">
-                  <a href="#tocAnchor-1-1-7"><span class="tocnumber">1.7</span> <span class="toctext">使用 libprocess 注册处理函数，基于 HTTP 监听消息</span></a>
-                </li>
-                <li class="toc_level-2 toc_section-9">
-                  <a href="#tocAnchor-1-1-8"><span class="tocnumber">1.8</span> <span class="toctext">进行 leader 选举</span></a>
-                </li>
-                <li class="toc_level-2 toc_section-10">
-                  <a href="#tocAnchor-1-1-9"><span class="tocnumber">1.9</span> <span class="toctext">完成初始化</span></a>
-                </li>
-              </ul>
+              <a href="#tocAnchor-1-1"><span class="tocnumber">1</span> <span class="toctext">参数合法性检查</span></a>
+            </li>
+            <li class="toc_level-1 toc_section-2">
+              <a href="#tocAnchor-1-2"><span class="tocnumber">2</span> <span class="toctext">权限相关的初始化</span></a>
+            </li>
+            <li class="toc_level-1 toc_section-3">
+              <a href="#tocAnchor-1-3"><span class="tocnumber">3</span> <span class="toctext">初始化 framework 的 rate limit</span></a>
+            </li>
+            <li class="toc_level-1 toc_section-4">
+              <a href="#tocAnchor-1-4"><span class="tocnumber">4</span> <span class="toctext">初始化 role 和 weight</span></a>
+            </li>
+            <li class="toc_level-1 toc_section-5">
+              <a href="#tocAnchor-1-5"><span class="tocnumber">5</span> <span class="toctext">初始化 allocator</span></a>
+            </li>
+            <li class="toc_level-1 toc_section-6">
+              <a href="#tocAnchor-1-6"><span class="tocnumber">6</span> <span class="toctext">发送 offer 的回调方法</span></a>
+            </li>
+            <li class="toc_level-1 toc_section-7">
+              <a href="#tocAnchor-1-7"><span class="tocnumber">7</span> <span class="toctext">使用 libprocess 注册处理函数，基于 HTTP 监听消息</span></a>
+            </li>
+            <li class="toc_level-1 toc_section-8">
+              <a href="#tocAnchor-1-8"><span class="tocnumber">8</span> <span class="toctext">进行 leader 选举</span></a>
+            </li>
+            <li class="toc_level-1 toc_section-9">
+              <a href="#tocAnchor-1-9"><span class="tocnumber">9</span> <span class="toctext">完成初始化</span></a>
             </li>
           </ul>
         </td>
       </tr>
     </tbody>
   </table>
-</div><h1 id="tocAnchor-1-1">Master Process 的初始化</h1>
-
-<p>Master 初始化的代码实现在 <code class="highlighter-rouge">src/master/master.cpp</code> 中：</p>
+</div><p>Master 初始化的代码实现在 <code class="highlighter-rouge">src/master/master.cpp</code> 中：</p>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">void</span> <span class="n">Master</span><span class="o">::</span><span class="n">initialize</span><span class="p">()</span>
 <span class="p">{</span>
@@ -133,11 +126,11 @@
 
 <p>下面列出主要步骤。</p>
 
-<h2 id="tocAnchor-1-1-1">参数合法性检查</h2>
+<h2 id="tocAnchor-1-1">参数合法性检查</h2>
 
 <p>不合法时直接退出。</p>
 
-<h2 id="tocAnchor-1-1-2">权限相关的初始化</h2>
+<h2 id="tocAnchor-1-2">权限相关的初始化</h2>
 
 <p>初始化了如下一些东西：</p>
 
@@ -146,11 +139,11 @@
 </code></pre>
 </div>
 
-<h2 id="tocAnchor-1-1-3">初始化 framework 的 rate limit</h2>
+<h2 id="tocAnchor-1-3">初始化 framework 的 rate limit</h2>
 
 <p>通过 rate limit，Mesos 可以控制用户的使用频率。</p>
 
-<h2 id="tocAnchor-1-1-4">初始化 role 和 weight</h2>
+<h2 id="tocAnchor-1-4">初始化 role 和 weight</h2>
 
 <p>初始化了下面两个属性：</p>
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code>  <span class="c1">// Configured role whitelist if using the (deprecated) "explicit
@@ -163,7 +156,7 @@
 </code></pre>
 </div>
 
-<h2 id="tocAnchor-1-1-5">初始化 allocator</h2>
+<h2 id="tocAnchor-1-5">初始化 allocator</h2>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code>  <span class="c1">// Initialize the allocator.
 </span>  <span class="n">allocator</span><span class="o">-&gt;</span><span class="n">initialize</span><span class="p">(</span>
@@ -211,7 +204,7 @@
 每过一段时间(allocationInterval)，Allocator 都会计算应该分给每个 framework 什么样的 offer，
 然后调用 offerCallback 把 offer 发出去。这里调用的就是 <code class="highlighter-rouge">Master:offer</code>。</p>
 
-<h2 id="tocAnchor-1-1-6">发送 offer 的回调方法</h2>
+<h2 id="tocAnchor-1-6">发送 offer 的回调方法</h2>
 
 <p><code class="highlighter-rouge">Master:offer</code> 方法生成了一个 <code class="highlighter-rouge">ResourceOffersMessage</code>，然后把这个 message 传递给 framework。</p>
 
@@ -291,7 +284,7 @@
 </code></pre>
 </div>
 
-<h2 id="tocAnchor-1-1-7">使用 libprocess 注册处理函数，基于 HTTP 监听消息</h2>
+<h2 id="tocAnchor-1-7">使用 libprocess 注册处理函数，基于 HTTP 监听消息</h2>
 
 <p>使用 libprocess 的 <code class="highlighter-rouge">install</code> 和 <code class="highlighter-rouge">route</code> 方法，
 注册一些处理函数，来处理各种消息，以及提供 HTTP API。</p>
@@ -332,7 +325,7 @@
 </code></pre>
 </div>
 
-<h2 id="tocAnchor-1-1-8">进行 leader 选举</h2>
+<h2 id="tocAnchor-1-8">进行 leader 选举</h2>
 
 <p>在 master 初始化的最后，进行 leader 选举：</p>
 
@@ -391,7 +384,7 @@
 </code></pre>
 </div>
 
-<h2 id="tocAnchor-1-1-9">完成初始化</h2>
+<h2 id="tocAnchor-1-9">完成初始化</h2>
 
 <p>至此，master 已经完成初始化，master process 开始工作，接受并处理来自其他组件或 API 的消息。</p>
 

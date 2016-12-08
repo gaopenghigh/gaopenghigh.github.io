@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Mesos 源码学习(0) libprocess 简介</title>
-  <meta name="description" content="什么是 libprocess">
+  <meta name="description" content="Libprocess 特性">
 
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="/mesos/2016/12/05/00_libprocess.html">
@@ -84,7 +84,7 @@
           </div>
           <ul>
             <li class="toc_level-1 toc_section-1">
-              <a href="#tocAnchor-1-1"><span class="tocnumber">1</span> <span class="toctext">什么是 libprocess</span></a>
+              <a href="#tocAnchor-1-1"><span class="tocnumber">1</span> <span class="toctext">Libprocess 特性</span></a>
               <ul>
                 <li class="toc_level-2 toc_section-2">
                   <a href="#tocAnchor-1-1-1"><span class="tocnumber">1.1</span> <span class="toctext">没有异常</span></a>
@@ -109,23 +109,48 @@
                 <li class="toc_level-2 toc_section-8">
                   <a href="#tocAnchor-1-6-2"><span class="tocnumber">2.2</span> <span class="toctext">PID</span></a>
                 </li>
-                <li class="toc_level-2 toc_section-9">
-                  <a href="#tocAnchor-1-6-3"><span class="tocnumber">2.3</span> <span class="toctext">本地消息</span></a>
-                </li>
+              </ul>
+            </li>
+            <li class="toc_level-1 toc_section-9">
+              <a href="#tocAnchor-1-9"><span class="tocnumber">3</span> <span class="toctext">本地消息</span></a>
+              <ul>
                 <li class="toc_level-2 toc_section-10">
-                  <a href="#tocAnchor-1-6-4"><span class="tocnumber">2.4</span> <span class="toctext">远程消息</span></a>
+                  <a href="#tocAnchor-1-9-1"><span class="tocnumber">3.1</span> <span class="toctext">通过 dispatch 异步地调用一个函数/方法</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-11">
+                  <a href="#tocAnchor-1-9-2"><span class="tocnumber">3.2</span> <span class="toctext">通过 delay 延迟地调用一个函数/方法</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-12">
+                  <a href="#tocAnchor-1-9-3"><span class="tocnumber">3.3</span> <span class="toctext">通过 promises/futures 进行函数式的组合</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-13">
+                  <a href="#tocAnchor-1-9-4"><span class="tocnumber">3.4</span> <span class="toctext">通过 defer 让回调函数在某个 process 中执行</span></a>
                 </li>
               </ul>
             </li>
-            <li class="toc_level-1 toc_section-11">
-              <a href="#tocAnchor-1-11"><span class="tocnumber">3</span> <span class="toctext">参考资料</span></a>
+            <li class="toc_level-1 toc_section-14">
+              <a href="#tocAnchor-1-14"><span class="tocnumber">4</span> <span class="toctext">远程消息</span></a>
+              <ul>
+                <li class="toc_level-2 toc_section-15">
+                  <a href="#tocAnchor-1-14-1"><span class="tocnumber">4.1</span> <span class="toctext">process 的 name</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-16">
+                  <a href="#tocAnchor-1-14-2"><span class="tocnumber">4.2</span> <span class="toctext">通过 route 和 install 为 process 添加远程消息的“路由”</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-17">
+                  <a href="#tocAnchor-1-14-3"><span class="tocnumber">4.3</span> <span class="toctext">通过 send 来实现消息传递（远程方法调用）</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-18">
+                  <a href="#tocAnchor-1-14-4"><span class="tocnumber">4.4</span> <span class="toctext">使用 protobuf</span></a>
+                </li>
+              </ul>
             </li>
           </ul>
         </td>
       </tr>
     </tbody>
   </table>
-</div><h1 id="tocAnchor-1-1">什么是 <code class="highlighter-rouge">libprocess</code></h1>
+</div><h2 id="tocAnchor-1-1">Libprocess 特性</h2>
 
 <p>Mesos 底层依赖于 libprocess 库，该库用 C++ 实现了 Actor 模式，不过它不叫 actor，而叫做 process。</p>
 
@@ -139,7 +164,7 @@
 <p>Libprocess 还提供了不同服务之间远程调用方式，依赖于 HTTP。
 也就是每个 process 会监听一个端口，提供 HTTP 服务，调用方最终是通过发送一个 HTTP 请求来调用，返回值也是通过 HTTP 返回来获得。</p>
 
-<h2 id="tocAnchor-1-1-1">没有异常</h2>
+<h3 id="tocAnchor-1-1-1">没有异常</h3>
 
 <p>通过 <code class="highlighter-rouge">Try&lt;T&gt;</code> 代替异常：</p>
 
@@ -153,7 +178,7 @@
 </code></pre>
 </div>
 
-<h2 id="tocAnchor-1-1-2">没有 NULL</h2>
+<h3 id="tocAnchor-1-1-2">没有 NULL</h3>
 
 <p>通过 <code class="highlighter-rouge">Option&lt;T&gt;</code> 代替 NULL：</p>
 
@@ -167,7 +192,7 @@
 </code></pre>
 </div>
 
-<h2 id="tocAnchor-1-1-3">不需要自己管理内存</h2>
+<h3 id="tocAnchor-1-1-3">不需要自己管理内存</h3>
 
 <p>通过使用 <code class="highlighter-rouge">Owned&lt;T&gt;</code>:</p>
 
@@ -178,7 +203,7 @@
 
 <p>Libprocess 库中通过“引用计数的指针(reference counted pointers)”来自己实现内存管理，不需要用户操心。</p>
 
-<h2 id="tocAnchor-1-1-4"><code class="highlighter-rouge">Try&lt;T&gt;</code> 和 <code class="highlighter-rouge">Option&lt;T&gt;</code> 可以组合成 <code class="highlighter-rouge">Result&lt;T&gt;</code></h2>
+<h3 id="tocAnchor-1-1-4"><code class="highlighter-rouge">Try&lt;T&gt;</code> 和 <code class="highlighter-rouge">Option&lt;T&gt;</code> 可以组合成 <code class="highlighter-rouge">Result&lt;T&gt;</code></h3>
 
 <p>基本上，<code class="highlighter-rouge">Result&lt;T&gt;</code> 相当于 <code class="highlighter-rouge">Try&lt;Option&lt;T&gt;&gt;</code>。例如：</p>
 
@@ -197,7 +222,7 @@
 </code></pre>
 </div>
 
-<h1 id="tocAnchor-1-6">process 特性</h1>
+<h2 id="tocAnchor-1-6">process 特性</h2>
 
 <p>Libprocess 中的 Actor 叫做 <code class="highlighter-rouge">process</code>，可以向一个 process 发送各种消息。主要特性：</p>
 <ol>
@@ -214,7 +239,7 @@
 a process at a time so no need for per process synchronization).</p>
 </blockquote>
 
-<h2 id="tocAnchor-1-6-1">一个 process 的生命周期</h2>
+<h3 id="tocAnchor-1-6-1">一个 process 的生命周期</h3>
 
 <div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="k">using</span> <span class="k">namespace</span> <span class="n">process</span><span class="p">;</span>
 
@@ -230,7 +255,7 @@ a process at a time so no need for per process synchronization).</p>
 </code></pre>
 </div>
 
-<h2 id="tocAnchor-1-6-2">PID</h2>
+<h3 id="tocAnchor-1-6-2">PID</h3>
 
 <p>每一个 <code class="highlighter-rouge">process</code> 拥有一个 PID，libprocess 的使用者只需要知道这个 PID，而不需要维护这个 process 的引用（指针）。</p>
 
@@ -249,9 +274,9 @@ a process at a time so no need for per process synchronization).</p>
 </code></pre>
 </div>
 
-<h2 id="tocAnchor-1-6-3">本地消息</h2>
+<h2 id="tocAnchor-1-9">本地消息</h2>
 
-<h3 id="dispatch-">通过 <code class="highlighter-rouge">dispatch</code> 异步地调用一个函数/方法</h3>
+<h3 id="tocAnchor-1-9-1">通过 <code class="highlighter-rouge">dispatch</code> 异步地调用一个函数/方法</h3>
 
 <p>相当于把一个消息传给一个 process：</p>
 
@@ -282,7 +307,7 @@ a process at a time so no need for per process synchronization).</p>
 </code></pre>
 </div>
 
-<h3 id="delay-">通过 <code class="highlighter-rouge">delay</code> 延迟地调用一个函数/方法</h3>
+<h3 id="tocAnchor-1-9-2">通过 <code class="highlighter-rouge">delay</code> 延迟地调用一个函数/方法</h3>
 
 <p>和 <code class="highlighter-rouge">dispatch</code> 类似，但调用会推迟一段时间，例如：</p>
 
@@ -290,7 +315,7 @@ a process at a time so no need for per process synchronization).</p>
 </code></pre>
 </div>
 
-<h3 id="promisesfutures-">通过 <code class="highlighter-rouge">promises/futures</code> 进行函数式的组合</h3>
+<h3 id="tocAnchor-1-9-3">通过 <code class="highlighter-rouge">promises/futures</code> 进行函数式的组合</h3>
 
 <p>Future 是针对调用方说得，表示一个可能还没有完成的异步任务的结果，需要在“未来”才能取到值。</p>
 
@@ -341,7 +366,7 @@ a process at a time so no need for per process synchronization).</p>
 
 <p>类似的回调函数还有 <code class="highlighter-rouge">Future::onReady</code>, <code class="highlighter-rouge">Future::onFailed</code> 等。</p>
 
-<h3 id="defer--process-">通过 <code class="highlighter-rouge">defer</code> 让回调函数在某个 process 中执行</h3>
+<h3 id="tocAnchor-1-9-4">通过 <code class="highlighter-rouge">defer</code> 让回调函数在某个 process 中执行</h3>
 
 <p>Future 中注册回调函数，其执行是同步的，也就是说会在完成任务（实现了 future）的那个线程执行，这有可能会阻塞。
 <code class="highlighter-rouge">defer</code> 提供了一种机制，可以把回调函数异步地执行。</p>
@@ -393,9 +418,9 @@ way, using <code class="highlighter-rouge">defer</code> is a way to <em>defer</e
 </code></pre>
 </div>
 
-<h2 id="tocAnchor-1-6-4">远程消息</h2>
+<h2 id="tocAnchor-1-14">远程消息</h2>
 
-<h3 id="process--name">process 的 name</h3>
+<h3 id="tocAnchor-1-14-1">process 的 name</h3>
 
 <p>Process 可以有一个 name，比如创建一个 name 为 “queue” 的 process:</p>
 
@@ -406,7 +431,7 @@ way, using <code class="highlighter-rouge">defer</code> is a way to <em>defer</e
 </code></pre>
 </div>
 
-<h3 id="route--install--process-">通过 <code class="highlighter-rouge">route</code> 和 <code class="highlighter-rouge">install</code> 为 process 添加远程消息的“路由”</h3>
+<h3 id="tocAnchor-1-14-2">通过 <code class="highlighter-rouge">route</code> 和 <code class="highlighter-rouge">install</code> 为 process 添加远程消息的“路由”</h3>
 
 <p>由于消息都是基于 HTTP 的，所以我们需要为 process 设置不同的“路由”，来处理不同的消息。</p>
 
@@ -442,7 +467,7 @@ way, using <code class="highlighter-rouge">defer</code> is a way to <em>defer</e
 </code></pre>
 </div>
 
-<h3 id="send-">通过 <code class="highlighter-rouge">send</code> 来实现消息传递（远程方法调用）</h3>
+<h3 id="tocAnchor-1-14-3">通过 <code class="highlighter-rouge">send</code> 来实现消息传递（远程方法调用）</h3>
 
 <p>调用方事实上等价于这样的 HTTP 请求：</p>
 
@@ -464,7 +489,7 @@ way, using <code class="highlighter-rouge">defer</code> is a way to <em>defer</e
 </code></pre>
 </div>
 
-<h3 id="protobuf">使用 protobuf</h3>
+<h3 id="tocAnchor-1-14-4">使用 protobuf</h3>
 
 <p>Libprocess 还支持使用 protobuf 来承载 payload:</p>
 
@@ -484,7 +509,7 @@ way, using <code class="highlighter-rouge">defer</code> is a way to <em>defer</e
 </code></pre>
 </div>
 
-<h1 id="tocAnchor-1-11">参考资料</h1>
+<h1 id="section-4">参考资料</h1>
 
 <ul>
   <li><a href="https://www.dropbox.com/s/9lgwzgy74gxn0w9/libprocess.pdf?dl=0">libprocess</a>： 这是 libprocess 和 Mesos 原作者 Benjamin Hindman 对于 libprocess 的介绍。</li>
