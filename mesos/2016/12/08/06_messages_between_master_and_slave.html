@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Mesos 源码学习(6) Master 和 Slave 之间的消息</title>
-  <meta name="description" content="Slave 初始化的最后，会做 Recovery ，而 Recovery 的最后，则调用 detector-&amp;gt;detect() 方法找到 leader master ，找到后，就回调 Slave:detected 方法。">
+  <meta name="description" content="Slave 向 Master 注册">
 
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="/mesos/2016/12/08/06_messages_between_master_and_slave.html">
@@ -86,18 +86,315 @@
           <ul>
             <li class="toc_level-1 toc_section-1">
               <a href="#tocAnchor-1-1"><span class="tocnumber">1</span> <span class="toctext">Slave 向 Master 注册</span></a>
+              <ul>
+                <li class="toc_level-2 toc_section-2">
+                  <a href="#tocAnchor-1-1-1"><span class="tocnumber">1.1</span> <span class="toctext">注册总流程</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-3">
+                  <a href="#tocAnchor-1-1-2"><span class="tocnumber">1.2</span> <span class="toctext">ReliablRegistration: 可依赖的注册</span></a>
+                </li>
+              </ul>
+            </li>
+            <li class="toc_level-1 toc_section-4">
+              <a href="#tocAnchor-1-4"><span class="tocnumber">2</span> <span class="toctext">Master 处理 Slave 的注册</span></a>
+              <ul>
+                <li class="toc_level-2 toc_section-5">
+                  <a href="#tocAnchor-1-4-1"><span class="tocnumber">2.1</span> <span class="toctext">第一次注册，处理 RegisterSlaveMessage 消息</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-6">
+                  <a href="#tocAnchor-1-4-2"><span class="tocnumber">2.2</span> <span class="toctext">重新注册，处理 ReregisterSlaveMessage 消息</span></a>
+                </li>
+              </ul>
+            </li>
+            <li class="toc_level-1 toc_section-7">
+              <a href="#tocAnchor-1-7"><span class="tocnumber">3</span> <span class="toctext">Slave::statusUpdate 方法。</span></a>
             </li>
           </ul>
         </td>
       </tr>
     </tbody>
   </table>
-</div><p>Slave 初始化的最后，会做 Recovery ，而 Recovery 的最后，则调用 <code class="highlighter-rouge">detector-&gt;detect()</code> 方法找到
-leader master ，找到后，就回调 <code class="highlighter-rouge">Slave:detected</code> 方法。</p>
+</div><h2 id="tocAnchor-1-1">Slave 向 Master 注册</h2>
 
-<h2 id="tocAnchor-1-1">Slave 向 Master 注册</h2>
+<h3 id="tocAnchor-1-1-1">注册总流程</h3>
 
-<p><code class="highlighter-rouge">Slave::statusUpdate</code> 方法。</p>
+<p>Slave 初始化的最后，会做 Recovery ，而 Recovery 的最后，则调用 <code class="highlighter-rouge">detector-&gt;detect()</code> 方法找到
+leader master ，找到后，就回调 <code class="highlighter-rouge">Slave:detected</code> 方法。改方法的主要逻辑是：</p>
+
+<ol>
+  <li>暂停 StatusUpdateManager</li>
+  <li>调用 <code class="highlighter-rouge">Slave::authenticate()</code> 做认证：
+    <ol>
+      <li>如果正在做 <code class="highlighter-rouge">authenticating</code>，就取消然后返回</li>
+      <li>调用 libprocess 中的 <code class="highlighter-rouge">link</code> 方法确保到 master 有一个 link，简单地说就是创建到 master 的一个
+长连接。</li>
+      <li>使用默认的或者自定义 module 中的 authenticatee 进行认证</li>
+      <li>认证完成后调用 <code class="highlighter-rouge">Slave::_authenticate</code> 方法，该方法：
+        <ol>
+          <li>如果认证失败，就等待一段 backoff 时间，再次调用 authenticate 做认证；</li>
+          <li>如果认证成功，则调用 <code class="highlighter-rouge">Slave::doReliableRegistration</code> 向 master 进行注册，详见见下一节；</li>
+        </ol>
+      </li>
+      <li>如果认证超时（写死的5秒），就调用 <code class="highlighter-rouge">Slave::authenticationTimeout</code> 方法，该方法会导致重试再一次
+认证。</li>
+    </ol>
+  </li>
+  <li>观察 leader master 的变化，如果 leader 变了，就再次调用一次 <code class="highlighter-rouge">Slave::detected</code> 方法。</li>
+</ol>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">void</span> <span class="n">Slave</span><span class="o">::</span><span class="n">detected</span><span class="p">(</span><span class="k">const</span> <span class="n">Future</span><span class="o">&lt;</span><span class="n">Option</span><span class="o">&lt;</span><span class="n">MasterInfo</span><span class="o">&gt;&gt;&amp;</span> <span class="n">_master</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">...</span>
+  <span class="c1">// Pause the status updates.
+</span>  <span class="n">statusUpdateManager</span><span class="o">-&gt;</span><span class="n">pause</span><span class="p">();</span>
+  <span class="p">...</span>
+  <span class="n">Option</span><span class="o">&lt;</span><span class="n">MasterInfo</span><span class="o">&gt;</span> <span class="n">latest</span><span class="p">;</span>
+  <span class="p">...</span>
+  <span class="n">latest</span> <span class="o">=</span> <span class="n">_master</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
+  <span class="n">master</span> <span class="o">=</span> <span class="n">UPID</span><span class="p">(</span><span class="n">_master</span><span class="p">.</span><span class="n">get</span><span class="p">().</span><span class="n">get</span><span class="p">().</span><span class="n">pid</span><span class="p">());</span>
+  <span class="p">...</span>
+  <span class="c1">// Authenticate with the master.
+</span>  <span class="n">authenticate</span><span class="p">();</span>
+  <span class="p">...</span>
+  <span class="c1">// Keep detecting masters.
+</span>  <span class="n">LOG</span><span class="p">(</span><span class="n">INFO</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="s">"Detecting new master"</span><span class="p">;</span>
+  <span class="n">detection</span> <span class="o">=</span> <span class="n">detector</span><span class="o">-&gt;</span><span class="n">detect</span><span class="p">(</span><span class="n">latest</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">onAny</span><span class="p">(</span><span class="n">defer</span><span class="p">(</span><span class="n">self</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">Slave</span><span class="o">::</span><span class="n">detected</span><span class="p">,</span> <span class="n">lambda</span><span class="o">::</span><span class="n">_1</span><span class="p">));</span>
+<span class="p">}</span>
+<span class="p">...</span>
+
+<span class="kt">void</span> <span class="n">Slave</span><span class="o">::</span><span class="n">authenticate</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="n">authenticated</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+  <span class="p">...</span>
+  
+
+</code></pre>
+</div>
+
+<h3 id="tocAnchor-1-1-2">ReliablRegistration: 可依赖的注册</h3>
+
+<p><code class="highlighter-rouge">Slave::doReliableRegistration</code> 的主要逻辑如下：</p>
+<ol>
+  <li>做一些状态检查，比如当 slave 的状态是 RUNNING 时就直接退出；</li>
+  <li>调用 libprocess 的 <code class="highlighter-rouge">link</code> 方法确保到 master process 有一个长连接；</li>
+  <li>如果 Slave 没有一个 ID，说明这是它的第一次注册，则：
+    <ol>
+      <li>创建一个 <code class="highlighter-rouge">RegisterSlaveMessage</code> 消息发送给 master process；</li>
+    </ol>
+  </li>
+  <li>如果 Slave 已经有了一个 ID（比如是 recover 回来的），说明这是 re-register，则：
+    <ol>
+      <li>创建一个 <code class="highlighter-rouge">ReregisterSlaveMessage</code> 消息</li>
+      <li>把 checkpointed resources，frameworks，tasks 和 executors 等信息填充到消息体中</li>
+      <li>然后把消息发给 master process</li>
+    </ol>
+  </li>
+  <li>在适当的 backoff 时间后，再次调用 <code class="highlighter-rouge">doReliableRegistration</code> 方法，这样当 slave 没有正常 run 起来
+时，会再次注册，而当 slave 已经 RUNNNIG 时，就完成了注册过程。</li>
+</ol>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code><span class="kt">void</span> <span class="n">Slave</span><span class="o">::</span><span class="n">doReliableRegistration</span><span class="p">(</span><span class="n">Duration</span> <span class="n">maxBackoff</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">state</span> <span class="o">==</span> <span class="n">RUNNING</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// Slave (re-)registered with the master.
+</span>    <span class="k">return</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="p">...</span>
+  <span class="c1">// Ensure there is a link to the master before we start
+</span>  <span class="c1">// communicating with it. We want to link after the initial
+</span>  <span class="c1">// registration backoff in order to avoid all of the agents
+</span>  <span class="c1">// establishing connections with the master at once.
+</span>  <span class="c1">// See MESOS-5330.
+</span>  <span class="n">link</span><span class="p">(</span><span class="n">master</span><span class="p">.</span><span class="n">get</span><span class="p">());</span>
+  
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">info</span><span class="p">.</span><span class="n">has_id</span><span class="p">())</span> <span class="p">{</span>
+    <span class="c1">// Registering for the first time.
+</span>    <span class="n">RegisterSlaveMessage</span> <span class="n">message</span><span class="p">;</span>
+    <span class="n">message</span><span class="p">.</span><span class="n">set_version</span><span class="p">(</span><span class="n">MESOS_VERSION</span><span class="p">);</span>
+    <span class="n">message</span><span class="p">.</span><span class="n">mutable_slave</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">CopyFrom</span><span class="p">(</span><span class="n">info</span><span class="p">);</span>
+
+    <span class="c1">// Include checkpointed resources.
+</span>    <span class="n">message</span><span class="p">.</span><span class="n">mutable_checkpointed_resources</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">CopyFrom</span><span class="p">(</span><span class="n">checkpointedResources</span><span class="p">);</span>
+
+    <span class="n">send</span><span class="p">(</span><span class="n">master</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span> <span class="n">message</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="c1">// Re-registering, so send tasks running.
+</span>    <span class="n">ReregisterSlaveMessage</span> <span class="n">message</span><span class="p">;</span>
+    <span class="n">message</span><span class="p">.</span><span class="n">set_version</span><span class="p">(</span><span class="n">MESOS_VERSION</span><span class="p">);</span>
+	<span class="p">...</span>
+	<span class="n">message</span><span class="p">.</span><span class="n">mutable_checkpointed_resources</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">CopyFrom</span><span class="p">(</span><span class="n">checkpointedResources</span><span class="p">);</span>
+	<span class="n">message</span><span class="p">.</span><span class="n">mutable_slave</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">CopyFrom</span><span class="p">(</span><span class="n">info</span><span class="p">);</span>
+	<span class="p">...</span>
+	<span class="n">send</span><span class="p">(</span><span class="n">master</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span> <span class="n">message</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="p">...</span>
+  <span class="n">process</span><span class="o">::</span><span class="n">delay</span><span class="p">(</span><span class="n">delay</span><span class="p">,</span> <span class="n">self</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">Slave</span><span class="o">::</span><span class="n">doReliableRegistration</span><span class="p">,</span> <span class="n">maxBackoff</span> <span class="o">*</span> <span class="mi">2</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<h2 id="tocAnchor-1-4">Master 处理 Slave 的注册</h2>
+
+<p>在 master process 初始化的最后，会注册一些处理方法，来处理不同类型的消息。</p>
+
+<h3 id="tocAnchor-1-4-1">第一次注册，处理 RegisterSlaveMessage 消息</h3>
+
+<p>负责处理 <code class="highlighter-rouge">RegisterSlaveMessage</code> 的是 <code class="highlighter-rouge">Master::registerSlave</code> 方法：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code>  <span class="n">install</span><span class="o">&lt;</span><span class="n">RegisterSlaveMessage</span><span class="o">&gt;</span><span class="p">(</span>
+      <span class="o">&amp;</span><span class="n">Master</span><span class="o">::</span><span class="n">registerSlave</span><span class="p">,</span>
+      <span class="o">&amp;</span><span class="n">RegisterSlaveMessage</span><span class="o">::</span><span class="n">slave</span><span class="p">,</span>
+      <span class="o">&amp;</span><span class="n">RegisterSlaveMessage</span><span class="o">::</span><span class="n">checkpointed_resources</span><span class="p">,</span>
+      <span class="o">&amp;</span><span class="n">RegisterSlaveMessage</span><span class="o">::</span><span class="n">version</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<h4 id="masterregisterslave-">Master::registerSlave 方法</h4>
+
+<p><code class="highlighter-rouge">Master::registerSlave</code> 方法的主要逻辑是：</p>
+<ol>
+  <li>检查认证：
+    <ol>
+      <li>如果该 slave 正在做认证就等一小会儿再次调用 <code class="highlighter-rouge">registerSlave</code> 方法；</li>
+      <li>如果设置了需要认证但 slave 没有通过认证，就向 slave 发送一个 <code class="highlighter-rouge">ShutdownMessage</code> 消息让它自己
+关闭；</li>
+    </ol>
+  </li>
+  <li>如果该 slave 所在的机器被设置为 DOWN 的状态，就向 slave 发送一个 <code class="highlighter-rouge">ShutdownMessage</code> 消息让它自己
+关闭。DOWN 的状态用于维护机器，具体参考
+<a href="http://mesos.apache.org/documentation/latest/maintenance/">Maintenance Primitives</a> 。</li>
+  <li>如果该 slave 已经注册过了（存在于 <code class="highlighter-rouge">slaves.registered</code> 中），则
+    <ol>
+      <li>如果已经注册的那个 slave 现在已经没有连接了，就把它移除掉，说明使用了同样地址的一个新的 slave
+来注册了。</li>
+      <li>如果已经注册的那个 slave 还在有连接，说明 slave 没有收到注册的 ACK，这时就在给 slave 发送一个
+ACK，即发送一个 <code class="highlighter-rouge">SlaveRegisteredMessage</code> 消息，然后退出。</li>
+    </ol>
+  </li>
+  <li>如果该 slave 正在注册中，则忽略此次消息，直接退出；</li>
+  <li>根据消息内容，创建一个 SlaveInfo ，通过 Registrar 把 SlaveInfo 存起来，然后再调用
+<code class="highlighter-rouge">Master::_registerSlave</code> 方法，该方法：
+    <ol>
+      <li>创建一个 <code class="highlighter-rouge">Slave</code> 结构，然后通过 <code class="highlighter-rouge">Master::addSlave</code> 方法把它加入进来。</li>
+      <li>发送给 slave 一个 ACK 消息，即 <code class="highlighter-rouge">SlaveRegisteredMessage</code>。</li>
+    </ol>
+  </li>
+</ol>
+
+<h5 id="masteraddslave-"><code class="highlighter-rouge">Master::addSlave</code> 方法</h5>
+
+<p><code class="highlighter-rouge">Master::addSlave</code> 方法：</p>
+<ol>
+  <li>把这个 Slave 放到 <code class="highlighter-rouge">slaves.registered</code> 结构中；</li>
+  <li>调用 libprocess 的 <code class="highlighter-rouge">link</code> 方法确保从 master 到 slave 有长连接；</li>
+  <li>把这个 slave 的机器放到 <code class="highlighter-rouge">machines</code> 结构中；</li>
+  <li>创建一个 <code class="highlighter-rouge">SlaveObserver</code>（这也是一个 libprocess process），来对这个 Slave 进行观察。
+slave observer process 的行为见下一节；</li>
+  <li>把这个 slave 上的 executor 和 task 信息存到 <code class="highlighter-rouge">frameworks</code> 数据结构中；</li>
+  <li>调用 <code class="highlighter-rouge">allocator-&gt;addSlave</code> 方法把这个 slave 加入到 Allocator 中，详见下面。</li>
+  <li>创建一个 <code class="highlighter-rouge">AgentAdded</code> 消息，发给所有订阅者，订阅者的列表维护在 <code class="highlighter-rouge">subscribers</code> 结构中。</li>
+</ol>
+
+<h4 id="slaveobserver--slave--reachable">SlaveObserver 负责探测一个 Slave 是否 reachable</h4>
+
+<p>SlaveObserver 通过 ping-pong 机制。负责探测一个 Slave 是否 reachable。</p>
+
+<p>这也是一个 libprocess process，它初始化之后就会每隔一小段时间给 slave 发送 <code class="highlighter-rouge">PingSlaveMessage</code>，
+Slave 会返回一个 <code class="highlighter-rouge">PongSlaveMessage</code> 。如果没有及时返回，就把这个 slave 标记为 unreachable。</p>
+
+<p>注意，把 slave 标记为 unreachable 是有速率限制的。</p>
+
+<p>最终的标记过程由 <code class="highlighter-rouge">Master::markUnreachable</code> 方法实现，主要逻辑是：</p>
+<ol>
+  <li>更新一下 <code class="highlighter-rouge">slaves</code> 结构，并且通过 <code class="highlighter-rouge">registrar</code> 把一些信息存储下来；</li>
+  <li>调用 <code class="highlighter-rouge">allocator-&gt;removeSlave</code> 方法把 slave 移出 Allocator；</li>
+  <li>调用 <code class="highlighter-rouge">Master::updateTask</code> 把该 slave 上的 task 状态设置为 <code class="highlighter-rouge">TASK_UNREACHABLE</code> 或 <code class="highlighter-rouge">TASK_LOST</code>。
+该方法会创建一个 <code class="highlighter-rouge">StatusUpdate</code> 消息，然后 TODO</li>
+  <li>调用 <code class="highlighter-rouge">Master::removeTask</code> 把这个 task remove 掉；</li>
+  <li>把 task 的状态通知它的 framework，也就是把 <code class="highlighter-rouge">StatusUpdate</code> 消息发送给 framework ；</li>
+  <li>调用 <code class="highlighter-rouge">Master::removeExecutor</code> 把这个 slave 上的 executor 移除；</li>
+  <li>针对涉及到这个 slave 的 offer，调用 <code class="highlighter-rouge">allocator-&gt;recoverResources</code> recover 这个 offer 的资源，
+然后调用 <code class="highlighter-rouge">Master::removeOffer</code> 方法把 offer 撤回；</li>
+  <li>针对涉及到这个 slave 的 inverse offer，调用 <code class="highlighter-rouge">removeInverseOffer</code> 把它们 remove 掉；</li>
+  <li>把这个 slave 从 <code class="highlighter-rouge">slaves.registered</code> 和 <code class="highlighter-rouge">authenticated</code> 中删除，
+添加进 <code class="highlighter-rouge">slaves.removed</code> 和 <code class="highlighter-rouge">unreachable</code> 中，把 slave 所在的机器从 <code class="highlighter-rouge">machines</code> 中删除；</li>
+  <li>Terminate 这个 slave 的 observer ；</li>
+  <li>调用 <code class="highlighter-rouge">sendSlaveLost</code> 方法，发送一个 <code class="highlighter-rouge">LostSlaveMessage</code> 消息给所有已经注册的 Framework，然后如果
+有注册 Hook 的话，调用 <code class="highlighter-rouge">masterSlaveLostHook</code> 。</li>
+</ol>
+
+<h3 id="tocAnchor-1-4-2">重新注册，处理 ReregisterSlaveMessage 消息</h3>
+
+<p>当一个 slave 重新注册时，会发送一个 <code class="highlighter-rouge">ReregisterSlaveMessage</code> 消息，
+该消息由 <code class="highlighter-rouge">Master::reregisterSlave</code> 方法处理：</p>
+
+<div class="language-c++ highlighter-rouge"><pre class="highlight"><code>  <span class="n">install</span><span class="o">&lt;</span><span class="n">ReregisterSlaveMessage</span><span class="o">&gt;</span><span class="p">(</span>
+      <span class="o">&amp;</span><span class="n">Master</span><span class="o">::</span><span class="n">reregisterSlave</span><span class="p">,</span>
+      <span class="o">&amp;</span><span class="n">ReregisterSlaveMessage</span><span class="o">::</span><span class="n">slave</span><span class="p">,</span>
+      <span class="o">&amp;</span><span class="n">ReregisterSlaveMessage</span><span class="o">::</span><span class="n">checkpointed_resources</span><span class="p">,</span>
+      <span class="o">&amp;</span><span class="n">ReregisterSlaveMessage</span><span class="o">::</span><span class="n">executor_infos</span><span class="p">,</span>
+      <span class="o">&amp;</span><span class="n">ReregisterSlaveMessage</span><span class="o">::</span><span class="n">tasks</span><span class="p">,</span>
+      <span class="o">&amp;</span><span class="n">ReregisterSlaveMessage</span><span class="o">::</span><span class="n">frameworks</span><span class="p">,</span>
+      <span class="o">&amp;</span><span class="n">ReregisterSlaveMessage</span><span class="o">::</span><span class="n">completed_frameworks</span><span class="p">,</span>
+      <span class="o">&amp;</span><span class="n">ReregisterSlaveMessage</span><span class="o">::</span><span class="n">version</span><span class="p">);</span>
+</code></pre>
+</div>
+
+<h4 id="masterreregisterslave-">Master::reregisterSlave 方法</h4>
+
+<p><code class="highlighter-rouge">Master::reregisterSlave</code> 方法的主要逻辑是：</p>
+<ol>
+  <li>检查认证：
+    <ol>
+      <li>如果该 slave 正在做认证就等一小会儿再次调用 <code class="highlighter-rouge">reregisterSlave</code> 方法；</li>
+      <li>如果设置了需要认证但 slave 没有通过认证，就向 slave 发送一个 <code class="highlighter-rouge">ShutdownMessage</code> 消息让它自己
+关闭；</li>
+    </ol>
+  </li>
+  <li>如果该 slave 所在的机器被设置为 DOWN 的状态，就向 slave 发送一个 <code class="highlighter-rouge">ShutdownMessage</code> 消息让它自己
+关闭。DOWN 的状态用于维护机器，具体参考
+<a href="http://mesos.apache.org/documentation/latest/maintenance/">Maintenance Primitives</a> 。</li>
+  <li>如果该 slave 已经注册（存在于 <code class="highlighter-rouge">slaves.registered</code> 中），则：
+    <ol>
+      <li>如果发现这次注册的 hostname 和 ip 和之前注册的不一致，就发送一个 <code class="highlighter-rouge">ShutdownMessage</code> 消息给
+slave 让它关闭，然后返回。</li>
+      <li>更新已经 slave process 的 PID，然后调用 libprocess 的 <code class="highlighter-rouge">link</code> 方法创建一个到 slave 的长连接；</li>
+      <li>调用 <code class="highlighter-rouge">Master::reconcileKnownSlave</code> 方法进行 reconcile，确保 master 和 slave 上保存的 task 
+一致，TODO</li>
+      <li>如果这是一个 disconnected 的 slave ：
+        <ol>
+          <li>调用 <code class="highlighter-rouge">SlaveObserver::reconnect</code> 方法重新连接，</li>
+          <li>调用 <code class="highlighter-rouge">allocator-&gt;activateSlave</code> 方法让这个 slave 在 Allocator 中重新 active 。</li>
+        </ol>
+      </li>
+      <li>调用 <code class="highlighter-rouge">Master::__reregisterSlave</code> 方法，告诉 slave master 的 version，以及新的 framework PID，
+然后退出；</li>
+    </ol>
+  </li>
+  <li>如果该 slave 正在注册，就忽略本次消息，然后退出；</li>
+  <li>如果该 slave 即没有注册也没有正在注册，通常情况下是由于这个 slave unreachable 了。这是就通过
+<code class="highlighter-rouge">registrar</code> 把 slave 的信息存储下来，然后调用 <code class="highlighter-rouge">Master::_reregisterSlave</code> 方法。</li>
+</ol>
+
+<h5 id="masterreregisterslave--1"><code class="highlighter-rouge">Master::_reregisterSlave</code> 方法</h5>
+
+<p>主要逻辑是：</p>
+<ol>
+  <li>调用 <code class="highlighter-rouge">Master::addSlave</code> 方法把 slave 加进来；</li>
+  <li>在 Mesos 1.1.0 版本中，新引入了实验性的 partition-aware 特性，具体可以参考：
+<a href="http://mesos.apache.org/blog/mesos-1-1-0-released/">Apache Mesos 1.1.0 Released</a> 。
+在这里，如果这个 slave 是由当前这个 master remove 掉的，那么对于没有设置 partition-aware 的
+framework，就发送一个 <code class="highlighter-rouge">ShutdownFrameworkMessage</code> 消息给 slave 让它关闭这个 framework ，也就是
+把 slave 上这个 framework 的所有 task 杀掉。</li>
+  <li>调用 <code class="highlighter-rouge">Master::__reregisterSlave</code> 方法</li>
+</ol>
+
+<h5 id="masterreregisterslave--2"><code class="highlighter-rouge">Master::__reregisterSlave</code> 方法</h5>
+
+<h4 id="masterreconcileknownslave-">Master::reconcileKnownSlave 方法</h4>
+
+<h2 id="tocAnchor-1-7"><code class="highlighter-rouge">Slave::statusUpdate</code> 方法。</h2>
 
   </div>
 

@@ -1,11 +1,285 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2016-12-08T18:34:03+08:00</updated><id>//</id><title type="html">做美好的人，做酷的事</title><subtitle>记录所学所想
-</subtitle><entry><title type="html">Mesos 源码学习(6) Master 和 Slave 之间的消息</title><link href="/mesos/2016/12/08/06_messages_between_master_and_slave.html" rel="alternate" type="text/html" title="Mesos 源码学习(6) Master 和 Slave 之间的消息" /><published>2016-12-08T17:10:00+08:00</published><updated>2016-12-08T17:10:00+08:00</updated><id>/mesos/2016/12/08/06_messages_between_master_and_slave</id><content type="html" xml:base="/mesos/2016/12/08/06_messages_between_master_and_slave.html">&lt;p&gt;Slave 初始化的最后，会做 Recovery ，而 Recovery 的最后，则调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;detector-&amp;gt;detect()&lt;/code&gt; 方法找到
-leader master ，找到后，就回调 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave:detected&lt;/code&gt; 方法。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2016-12-09T18:31:43+08:00</updated><id>//</id><title type="html">做美好的人，做酷的事</title><subtitle>记录所学所想
+</subtitle><entry><title type="html">Mesos 源码学习(6) Master 和 Slave 之间的消息</title><link href="/mesos/2016/12/08/06_messages_between_master_and_slave.html" rel="alternate" type="text/html" title="Mesos 源码学习(6) Master 和 Slave 之间的消息" /><published>2016-12-08T17:10:00+08:00</published><updated>2016-12-08T17:10:00+08:00</updated><id>/mesos/2016/12/08/06_messages_between_master_and_slave</id><content type="html" xml:base="/mesos/2016/12/08/06_messages_between_master_and_slave.html">&lt;h2 id=&quot;slave--master-&quot;&gt;Slave 向 Master 注册&lt;/h2&gt;
 
-&lt;h2 id=&quot;slave--master-&quot;&gt;Slave 向 Master 注册&lt;/h2&gt;
+&lt;h3 id=&quot;section&quot;&gt;注册总流程&lt;/h3&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::statusUpdate&lt;/code&gt; 方法。&lt;/p&gt;</content><summary type="html">Slave 初始化的最后，会做 Recovery ，而 Recovery 的最后，则调用 detector-&amp;gt;detect() 方法找到
-leader master ，找到后，就回调 Slave:detected 方法。</summary></entry><entry><title type="html">Mesos 源码学习(5) Slave Recovery</title><link href="/mesos/2016/12/07/05_slave_recovery.html" rel="alternate" type="text/html" title="Mesos 源码学习(5) Slave Recovery" /><published>2016-12-07T18:00:00+08:00</published><updated>2016-12-07T18:00:00+08:00</updated><id>/mesos/2016/12/07/05_slave_recovery</id><content type="html" xml:base="/mesos/2016/12/07/05_slave_recovery.html">&lt;p&gt;在 Slave 初始化的最后，会进行 recovery ：&lt;/p&gt;
+&lt;p&gt;Slave 初始化的最后，会做 Recovery ，而 Recovery 的最后，则调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;detector-&amp;gt;detect()&lt;/code&gt; 方法找到
+leader master ，找到后，就回调 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave:detected&lt;/code&gt; 方法。改方法的主要逻辑是：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;暂停 StatusUpdateManager&lt;/li&gt;
+  &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::authenticate()&lt;/code&gt; 做认证：
+    &lt;ol&gt;
+      &lt;li&gt;如果正在做 &lt;code class=&quot;highlighter-rouge&quot;&gt;authenticating&lt;/code&gt;，就取消然后返回&lt;/li&gt;
+      &lt;li&gt;调用 libprocess 中的 &lt;code class=&quot;highlighter-rouge&quot;&gt;link&lt;/code&gt; 方法确保到 master 有一个 link，简单地说就是创建到 master 的一个
+长连接。&lt;/li&gt;
+      &lt;li&gt;使用默认的或者自定义 module 中的 authenticatee 进行认证&lt;/li&gt;
+      &lt;li&gt;认证完成后调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::_authenticate&lt;/code&gt; 方法，该方法：
+        &lt;ol&gt;
+          &lt;li&gt;如果认证失败，就等待一段 backoff 时间，再次调用 authenticate 做认证；&lt;/li&gt;
+          &lt;li&gt;如果认证成功，则调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::doReliableRegistration&lt;/code&gt; 向 master 进行注册，详见见下一节；&lt;/li&gt;
+        &lt;/ol&gt;
+      &lt;/li&gt;
+      &lt;li&gt;如果认证超时（写死的5秒），就调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::authenticationTimeout&lt;/code&gt; 方法，该方法会导致重试再一次
+认证。&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+  &lt;li&gt;观察 leader master 的变化，如果 leader 变了，就再次调用一次 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::detected&lt;/code&gt; 方法。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;detected&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Future&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Option&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;MasterInfo&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_master&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// Pause the status updates.
+&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;statusUpdateManager&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pause&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;Option&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;MasterInfo&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;latest&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;latest&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_master&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;master&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;UPID&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_master&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;().&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;().&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// Authenticate with the master.
+&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;authenticate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// Keep detecting masters.
+&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;LOG&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;INFO&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Detecting new master&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;detection&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;detector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;detect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;latest&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;onAny&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;defer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;detected&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lambda&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+
+&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;authenticate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;authenticated&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;reliablregistration-&quot;&gt;ReliablRegistration: 可依赖的注册&lt;/h3&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::doReliableRegistration&lt;/code&gt; 的主要逻辑如下：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;做一些状态检查，比如当 slave 的状态是 RUNNING 时就直接退出；&lt;/li&gt;
+  &lt;li&gt;调用 libprocess 的 &lt;code class=&quot;highlighter-rouge&quot;&gt;link&lt;/code&gt; 方法确保到 master process 有一个长连接；&lt;/li&gt;
+  &lt;li&gt;如果 Slave 没有一个 ID，说明这是它的第一次注册，则：
+    &lt;ol&gt;
+      &lt;li&gt;创建一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;RegisterSlaveMessage&lt;/code&gt; 消息发送给 master process；&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+  &lt;li&gt;如果 Slave 已经有了一个 ID（比如是 recover 回来的），说明这是 re-register，则：
+    &lt;ol&gt;
+      &lt;li&gt;创建一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;ReregisterSlaveMessage&lt;/code&gt; 消息&lt;/li&gt;
+      &lt;li&gt;把 checkpointed resources，frameworks，tasks 和 executors 等信息填充到消息体中&lt;/li&gt;
+      &lt;li&gt;然后把消息发给 master process&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+  &lt;li&gt;在适当的 backoff 时间后，再次调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;doReliableRegistration&lt;/code&gt; 方法，这样当 slave 没有正常 run 起来
+时，会再次注册，而当 slave 已经 RUNNNIG 时，就完成了注册过程。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;doReliableRegistration&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Duration&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;maxBackoff&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;RUNNING&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// Slave (re-)registered with the master.
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// Ensure there is a link to the master before we start
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// communicating with it. We want to link after the initial
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// registration backoff in order to avoid all of the agents
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// establishing connections with the master at once.
+&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// See MESOS-5330.
+&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;link&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;master&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
+  
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;has_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// Registering for the first time.
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;RegisterSlaveMessage&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;set_version&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;MESOS_VERSION&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mutable_slave&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;CopyFrom&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// Include checkpointed resources.
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mutable_checkpointed_resources&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;CopyFrom&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;checkpointedResources&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;send&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;master&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// Re-registering, so send tasks running.
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;ReregisterSlaveMessage&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;set_version&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;MESOS_VERSION&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mutable_checkpointed_resources&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;CopyFrom&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;checkpointedResources&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mutable_slave&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;CopyFrom&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;send&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;master&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;delay&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;delay&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;doReliableRegistration&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;maxBackoff&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;master--slave-&quot;&gt;Master 处理 Slave 的注册&lt;/h2&gt;
+
+&lt;p&gt;在 master process 初始化的最后，会注册一些处理方法，来处理不同类型的消息。&lt;/p&gt;
+
+&lt;h3 id=&quot;registerslavemessage-&quot;&gt;第一次注册，处理 RegisterSlaveMessage 消息&lt;/h3&gt;
+
+&lt;p&gt;负责处理 &lt;code class=&quot;highlighter-rouge&quot;&gt;RegisterSlaveMessage&lt;/code&gt; 的是 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::registerSlave&lt;/code&gt; 方法：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;install&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;RegisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Master&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;registerSlave&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;RegisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;slave&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;RegisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;checkpointed_resources&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;RegisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;version&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h4 id=&quot;masterregisterslave-&quot;&gt;Master::registerSlave 方法&lt;/h4&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Master::registerSlave&lt;/code&gt; 方法的主要逻辑是：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;检查认证：
+    &lt;ol&gt;
+      &lt;li&gt;如果该 slave 正在做认证就等一小会儿再次调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;registerSlave&lt;/code&gt; 方法；&lt;/li&gt;
+      &lt;li&gt;如果设置了需要认证但 slave 没有通过认证，就向 slave 发送一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;ShutdownMessage&lt;/code&gt; 消息让它自己
+关闭；&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+  &lt;li&gt;如果该 slave 所在的机器被设置为 DOWN 的状态，就向 slave 发送一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;ShutdownMessage&lt;/code&gt; 消息让它自己
+关闭。DOWN 的状态用于维护机器，具体参考
+&lt;a href=&quot;http://mesos.apache.org/documentation/latest/maintenance/&quot;&gt;Maintenance Primitives&lt;/a&gt; 。&lt;/li&gt;
+  &lt;li&gt;如果该 slave 已经注册过了（存在于 &lt;code class=&quot;highlighter-rouge&quot;&gt;slaves.registered&lt;/code&gt; 中），则
+    &lt;ol&gt;
+      &lt;li&gt;如果已经注册的那个 slave 现在已经没有连接了，就把它移除掉，说明使用了同样地址的一个新的 slave
+来注册了。&lt;/li&gt;
+      &lt;li&gt;如果已经注册的那个 slave 还在有连接，说明 slave 没有收到注册的 ACK，这时就在给 slave 发送一个
+ACK，即发送一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;SlaveRegisteredMessage&lt;/code&gt; 消息，然后退出。&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+  &lt;li&gt;如果该 slave 正在注册中，则忽略此次消息，直接退出；&lt;/li&gt;
+  &lt;li&gt;根据消息内容，创建一个 SlaveInfo ，通过 Registrar 把 SlaveInfo 存起来，然后再调用
+&lt;code class=&quot;highlighter-rouge&quot;&gt;Master::_registerSlave&lt;/code&gt; 方法，该方法：
+    &lt;ol&gt;
+      &lt;li&gt;创建一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;Slave&lt;/code&gt; 结构，然后通过 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::addSlave&lt;/code&gt; 方法把它加入进来。&lt;/li&gt;
+      &lt;li&gt;发送给 slave 一个 ACK 消息，即 &lt;code class=&quot;highlighter-rouge&quot;&gt;SlaveRegisteredMessage&lt;/code&gt;。&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h5 id=&quot;masteraddslave-&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Master::addSlave&lt;/code&gt; 方法&lt;/h5&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Master::addSlave&lt;/code&gt; 方法：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;把这个 Slave 放到 &lt;code class=&quot;highlighter-rouge&quot;&gt;slaves.registered&lt;/code&gt; 结构中；&lt;/li&gt;
+  &lt;li&gt;调用 libprocess 的 &lt;code class=&quot;highlighter-rouge&quot;&gt;link&lt;/code&gt; 方法确保从 master 到 slave 有长连接；&lt;/li&gt;
+  &lt;li&gt;把这个 slave 的机器放到 &lt;code class=&quot;highlighter-rouge&quot;&gt;machines&lt;/code&gt; 结构中；&lt;/li&gt;
+  &lt;li&gt;创建一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;SlaveObserver&lt;/code&gt;（这也是一个 libprocess process），来对这个 Slave 进行观察。
+slave observer process 的行为见下一节；&lt;/li&gt;
+  &lt;li&gt;把这个 slave 上的 executor 和 task 信息存到 &lt;code class=&quot;highlighter-rouge&quot;&gt;frameworks&lt;/code&gt; 数据结构中；&lt;/li&gt;
+  &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;allocator-&amp;gt;addSlave&lt;/code&gt; 方法把这个 slave 加入到 Allocator 中，详见下面。&lt;/li&gt;
+  &lt;li&gt;创建一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;AgentAdded&lt;/code&gt; 消息，发给所有订阅者，订阅者的列表维护在 &lt;code class=&quot;highlighter-rouge&quot;&gt;subscribers&lt;/code&gt; 结构中。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h4 id=&quot;slaveobserver--slave--reachable&quot;&gt;SlaveObserver 负责探测一个 Slave 是否 reachable&lt;/h4&gt;
+
+&lt;p&gt;SlaveObserver 通过 ping-pong 机制。负责探测一个 Slave 是否 reachable。&lt;/p&gt;
+
+&lt;p&gt;这也是一个 libprocess process，它初始化之后就会每隔一小段时间给 slave 发送 &lt;code class=&quot;highlighter-rouge&quot;&gt;PingSlaveMessage&lt;/code&gt;，
+Slave 会返回一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;PongSlaveMessage&lt;/code&gt; 。如果没有及时返回，就把这个 slave 标记为 unreachable。&lt;/p&gt;
+
+&lt;p&gt;注意，把 slave 标记为 unreachable 是有速率限制的。&lt;/p&gt;
+
+&lt;p&gt;最终的标记过程由 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::markUnreachable&lt;/code&gt; 方法实现，主要逻辑是：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;更新一下 &lt;code class=&quot;highlighter-rouge&quot;&gt;slaves&lt;/code&gt; 结构，并且通过 &lt;code class=&quot;highlighter-rouge&quot;&gt;registrar&lt;/code&gt; 把一些信息存储下来；&lt;/li&gt;
+  &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;allocator-&amp;gt;removeSlave&lt;/code&gt; 方法把 slave 移出 Allocator；&lt;/li&gt;
+  &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::updateTask&lt;/code&gt; 把该 slave 上的 task 状态设置为 &lt;code class=&quot;highlighter-rouge&quot;&gt;TASK_UNREACHABLE&lt;/code&gt; 或 &lt;code class=&quot;highlighter-rouge&quot;&gt;TASK_LOST&lt;/code&gt;。
+该方法会创建一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;StatusUpdate&lt;/code&gt; 消息，然后 TODO&lt;/li&gt;
+  &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::removeTask&lt;/code&gt; 把这个 task remove 掉；&lt;/li&gt;
+  &lt;li&gt;把 task 的状态通知它的 framework，也就是把 &lt;code class=&quot;highlighter-rouge&quot;&gt;StatusUpdate&lt;/code&gt; 消息发送给 framework ；&lt;/li&gt;
+  &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::removeExecutor&lt;/code&gt; 把这个 slave 上的 executor 移除；&lt;/li&gt;
+  &lt;li&gt;针对涉及到这个 slave 的 offer，调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;allocator-&amp;gt;recoverResources&lt;/code&gt; recover 这个 offer 的资源，
+然后调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::removeOffer&lt;/code&gt; 方法把 offer 撤回；&lt;/li&gt;
+  &lt;li&gt;针对涉及到这个 slave 的 inverse offer，调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;removeInverseOffer&lt;/code&gt; 把它们 remove 掉；&lt;/li&gt;
+  &lt;li&gt;把这个 slave 从 &lt;code class=&quot;highlighter-rouge&quot;&gt;slaves.registered&lt;/code&gt; 和 &lt;code class=&quot;highlighter-rouge&quot;&gt;authenticated&lt;/code&gt; 中删除，
+添加进 &lt;code class=&quot;highlighter-rouge&quot;&gt;slaves.removed&lt;/code&gt; 和 &lt;code class=&quot;highlighter-rouge&quot;&gt;unreachable&lt;/code&gt; 中，把 slave 所在的机器从 &lt;code class=&quot;highlighter-rouge&quot;&gt;machines&lt;/code&gt; 中删除；&lt;/li&gt;
+  &lt;li&gt;Terminate 这个 slave 的 observer ；&lt;/li&gt;
+  &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;sendSlaveLost&lt;/code&gt; 方法，发送一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;LostSlaveMessage&lt;/code&gt; 消息给所有已经注册的 Framework，然后如果
+有注册 Hook 的话，调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;masterSlaveLostHook&lt;/code&gt; 。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;reregisterslavemessage-&quot;&gt;重新注册，处理 ReregisterSlaveMessage 消息&lt;/h3&gt;
+
+&lt;p&gt;当一个 slave 重新注册时，会发送一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;ReregisterSlaveMessage&lt;/code&gt; 消息，
+该消息由 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::reregisterSlave&lt;/code&gt; 方法处理：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;install&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ReregisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Master&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reregisterSlave&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ReregisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;slave&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ReregisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;checkpointed_resources&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ReregisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;executor_infos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ReregisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tasks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ReregisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frameworks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ReregisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;completed_frameworks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ReregisterSlaveMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;version&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h4 id=&quot;masterreregisterslave-&quot;&gt;Master::reregisterSlave 方法&lt;/h4&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Master::reregisterSlave&lt;/code&gt; 方法的主要逻辑是：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;检查认证：
+    &lt;ol&gt;
+      &lt;li&gt;如果该 slave 正在做认证就等一小会儿再次调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;reregisterSlave&lt;/code&gt; 方法；&lt;/li&gt;
+      &lt;li&gt;如果设置了需要认证但 slave 没有通过认证，就向 slave 发送一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;ShutdownMessage&lt;/code&gt; 消息让它自己
+关闭；&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+  &lt;li&gt;如果该 slave 所在的机器被设置为 DOWN 的状态，就向 slave 发送一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;ShutdownMessage&lt;/code&gt; 消息让它自己
+关闭。DOWN 的状态用于维护机器，具体参考
+&lt;a href=&quot;http://mesos.apache.org/documentation/latest/maintenance/&quot;&gt;Maintenance Primitives&lt;/a&gt; 。&lt;/li&gt;
+  &lt;li&gt;如果该 slave 已经注册（存在于 &lt;code class=&quot;highlighter-rouge&quot;&gt;slaves.registered&lt;/code&gt; 中），则：
+    &lt;ol&gt;
+      &lt;li&gt;如果发现这次注册的 hostname 和 ip 和之前注册的不一致，就发送一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;ShutdownMessage&lt;/code&gt; 消息给
+slave 让它关闭，然后返回。&lt;/li&gt;
+      &lt;li&gt;更新已经 slave process 的 PID，然后调用 libprocess 的 &lt;code class=&quot;highlighter-rouge&quot;&gt;link&lt;/code&gt; 方法创建一个到 slave 的长连接；&lt;/li&gt;
+      &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::reconcileKnownSlave&lt;/code&gt; 方法进行 reconcile，确保 master 和 slave 上保存的 task 
+一致，TODO&lt;/li&gt;
+      &lt;li&gt;如果这是一个 disconnected 的 slave ：
+        &lt;ol&gt;
+          &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;SlaveObserver::reconnect&lt;/code&gt; 方法重新连接，&lt;/li&gt;
+          &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;allocator-&amp;gt;activateSlave&lt;/code&gt; 方法让这个 slave 在 Allocator 中重新 active 。&lt;/li&gt;
+        &lt;/ol&gt;
+      &lt;/li&gt;
+      &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::__reregisterSlave&lt;/code&gt; 方法，告诉 slave master 的 version，以及新的 framework PID，
+然后退出；&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+  &lt;li&gt;如果该 slave 正在注册，就忽略本次消息，然后退出；&lt;/li&gt;
+  &lt;li&gt;如果该 slave 即没有注册也没有正在注册，通常情况下是由于这个 slave unreachable 了。这是就通过
+&lt;code class=&quot;highlighter-rouge&quot;&gt;registrar&lt;/code&gt; 把 slave 的信息存储下来，然后调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::_reregisterSlave&lt;/code&gt; 方法。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h5 id=&quot;masterreregisterslave--1&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Master::_reregisterSlave&lt;/code&gt; 方法&lt;/h5&gt;
+
+&lt;p&gt;主要逻辑是：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::addSlave&lt;/code&gt; 方法把 slave 加进来；&lt;/li&gt;
+  &lt;li&gt;在 Mesos 1.1.0 版本中，新引入了实验性的 partition-aware 特性，具体可以参考：
+&lt;a href=&quot;http://mesos.apache.org/blog/mesos-1-1-0-released/&quot;&gt;Apache Mesos 1.1.0 Released&lt;/a&gt; 。
+在这里，如果这个 slave 是由当前这个 master remove 掉的，那么对于没有设置 partition-aware 的
+framework，就发送一个 &lt;code class=&quot;highlighter-rouge&quot;&gt;ShutdownFrameworkMessage&lt;/code&gt; 消息给 slave 让它关闭这个 framework ，也就是
+把 slave 上这个 framework 的所有 task 杀掉。&lt;/li&gt;
+  &lt;li&gt;调用 &lt;code class=&quot;highlighter-rouge&quot;&gt;Master::__reregisterSlave&lt;/code&gt; 方法&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h5 id=&quot;masterreregisterslave--2&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Master::__reregisterSlave&lt;/code&gt; 方法&lt;/h5&gt;
+
+&lt;h4 id=&quot;masterreconcileknownslave-&quot;&gt;Master::reconcileKnownSlave 方法&lt;/h4&gt;
+
+&lt;h2 id=&quot;slavestatusupdate-&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Slave::statusUpdate&lt;/code&gt; 方法。&lt;/h2&gt;</content><summary type="html">Slave 向 Master 注册</summary></entry><entry><title type="html">Mesos 源码学习(5) Slave Recovery</title><link href="/mesos/2016/12/07/05_slave_recovery.html" rel="alternate" type="text/html" title="Mesos 源码学习(5) Slave Recovery" /><published>2016-12-07T18:00:00+08:00</published><updated>2016-12-07T18:00:00+08:00</updated><id>/mesos/2016/12/07/05_slave_recovery</id><content type="html" xml:base="/mesos/2016/12/07/05_slave_recovery.html">&lt;p&gt;在 Slave 初始化的最后，会进行 recovery ：&lt;/p&gt;
 
 &lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Slave&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;initialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
 &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
