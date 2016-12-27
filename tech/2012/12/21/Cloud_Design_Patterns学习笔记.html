@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Cloud Design Patterns 学习笔记</title>
+  <meta name="description" content="写于 2012-12-21 。">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="/tech/2012/12/21/Cloud_Design_Patterns%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="/feed.xml">
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+  
+  
+</head>
+
+
+  <body>
+
+    <header class="site-header" role="banner">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <span class="menu-icon">
+        <svg viewBox="0 0 18 15" width="18px" height="15px">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </span>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <!-- This css contains the default style for TOC -->
+    <link rel="stylesheet" type="text/css" media="screen" href="/css/toc.css">
+    <!--
+    <link rel="stylesheet" type="text/css" media="screen" href="/css/monokai.css">
+    <style>
+        pre {background-color:#272822;}
+    </style>
+    -->
+    <h1 class="post-title" itemprop="name headline">Cloud Design Patterns 学习笔记</h1>
+    <p class="post-meta"><time datetime="2012-12-21T14:00:00+08:00" itemprop="datePublished">Dec 21, 2012</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <div id="toc-container">
+  <table class="toc" id="toc">
+    <tbody>
+      <tr>
+        <td>
+          <div id="toctitle">
+            <h2>Contents</h2>
+          </div>
+          <ul>
+            <li class="toc_level-1 toc_section-1">
+              <a href="#tocAnchor-1-1"><span class="tocnumber">1</span> <span class="toctext">Patterns</span></a>
+              <ul>
+                <li class="toc_level-2 toc_section-2">
+                  <a href="#tocAnchor-1-1-1"><span class="tocnumber">1.1</span> <span class="toctext">1. Cache-aside Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-3">
+                  <a href="#tocAnchor-1-1-2"><span class="tocnumber">1.2</span> <span class="toctext">2. Circuit Breaker Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-4">
+                  <a href="#tocAnchor-1-1-3"><span class="tocnumber">1.3</span> <span class="toctext">3. Compensating Transaction Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-5">
+                  <a href="#tocAnchor-1-1-4"><span class="tocnumber">1.4</span> <span class="toctext">4. Competing Consumers Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-6">
+                  <a href="#tocAnchor-1-1-5"><span class="tocnumber">1.5</span> <span class="toctext">5. Compute Resource Consolidation Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-7">
+                  <a href="#tocAnchor-1-1-6"><span class="tocnumber">1.6</span> <span class="toctext">6. Command and Query Responsibility Segregation (CQRS) Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-8">
+                  <a href="#tocAnchor-1-1-7"><span class="tocnumber">1.7</span> <span class="toctext">7. Event Sourcing Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-9">
+                  <a href="#tocAnchor-1-1-8"><span class="tocnumber">1.8</span> <span class="toctext">8. External Configuration Store Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-10">
+                  <a href="#tocAnchor-1-1-9"><span class="tocnumber">1.9</span> <span class="toctext">9. Federated Identity Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-11">
+                  <a href="#tocAnchor-1-1-10"><span class="tocnumber">1.10</span> <span class="toctext">10. Gatekeeper Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-12">
+                  <a href="#tocAnchor-1-1-11"><span class="tocnumber">1.11</span> <span class="toctext">11. Health Endpoint Monitoring Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-13">
+                  <a href="#tocAnchor-1-1-12"><span class="tocnumber">1.12</span> <span class="toctext">12. Index Table Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-14">
+                  <a href="#tocAnchor-1-1-13"><span class="tocnumber">1.13</span> <span class="toctext">13. Leader Election Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-15">
+                  <a href="#tocAnchor-1-1-14"><span class="tocnumber">1.14</span> <span class="toctext">14. Materialized View Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-16">
+                  <a href="#tocAnchor-1-1-15"><span class="tocnumber">1.15</span> <span class="toctext">15. Pipes and Filters Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-17">
+                  <a href="#tocAnchor-1-1-16"><span class="tocnumber">1.16</span> <span class="toctext">16. Priority Queue Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-18">
+                  <a href="#tocAnchor-1-1-17"><span class="tocnumber">1.17</span> <span class="toctext">17. Queue-Based Load Leveling Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-19">
+                  <a href="#tocAnchor-1-1-18"><span class="tocnumber">1.18</span> <span class="toctext">18. Retry Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-20">
+                  <a href="#tocAnchor-1-1-19"><span class="tocnumber">1.19</span> <span class="toctext">19. Runtime Reconfiguration Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-21">
+                  <a href="#tocAnchor-1-1-20"><span class="tocnumber">1.20</span> <span class="toctext">20. Scheduler Agent Supervisor Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-22">
+                  <a href="#tocAnchor-1-1-21"><span class="tocnumber">1.21</span> <span class="toctext">21. Sharding Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-23">
+                  <a href="#tocAnchor-1-1-22"><span class="tocnumber">1.22</span> <span class="toctext">22. Static Content Hosting Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-24">
+                  <a href="#tocAnchor-1-1-23"><span class="tocnumber">1.23</span> <span class="toctext">23. Throttling Pattern</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-25">
+                  <a href="#tocAnchor-1-1-24"><span class="tocnumber">1.24</span> <span class="toctext">24. Valet Key Pattern</span></a>
+                </li>
+              </ul>
+            </li>
+            <li class="toc_level-1 toc_section-26">
+              <a href="#tocAnchor-1-26"><span class="tocnumber">2</span> <span class="toctext">Guidances</span></a>
+              <ul>
+                <li class="toc_level-2 toc_section-27">
+                  <a href="#tocAnchor-1-26-1"><span class="tocnumber">2.1</span> <span class="toctext">1. Asynchronous Messaging Primer</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-28">
+                  <a href="#tocAnchor-1-26-2"><span class="tocnumber">2.2</span> <span class="toctext">2. Autoscaling Guidance</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-29">
+                  <a href="#tocAnchor-1-26-3"><span class="tocnumber">2.3</span> <span class="toctext">3. Caching Guidance</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-30">
+                  <a href="#tocAnchor-1-26-4"><span class="tocnumber">2.4</span> <span class="toctext">4. Compute Partitioning Guidance</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-31">
+                  <a href="#tocAnchor-1-26-5"><span class="tocnumber">2.5</span> <span class="toctext">5. Data Consistency Primer</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-32">
+                  <a href="#tocAnchor-1-26-6"><span class="tocnumber">2.6</span> <span class="toctext">6. Data Partitioning Guidance</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-33">
+                  <a href="#tocAnchor-1-26-7"><span class="tocnumber">2.7</span> <span class="toctext">7. Data Replication and Synchronization Guidance</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-34">
+                  <a href="#tocAnchor-1-26-8"><span class="tocnumber">2.8</span> <span class="toctext">8. Instrumentation and Telemetry Guidance</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-35">
+                  <a href="#tocAnchor-1-26-9"><span class="tocnumber">2.9</span> <span class="toctext">9. Multiple Datacenter Deployment Guidance</span></a>
+                </li>
+                <li class="toc_level-2 toc_section-36">
+                  <a href="#tocAnchor-1-26-10"><span class="tocnumber">2.10</span> <span class="toctext">10. Service Metering Guidance</span></a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div><p>写于 2012-12-21 。</p>
+
+<p>Cloud Design Patterns 学习笔记</p>
+
+<p>微软发布了 “<a href="https://msdn.microsoft.com/en-us/library/dn568099.aspx">Cloud Design Patterns: Prescriptive Architecture Guidance for Cloud Applications</a> “。书中，针对云应用总结出了 24 个设计模式和 10 个 Guidance 。本文简要记录一下这些 pattern 和 guidance 的思想。</p>
+
+<h2 id="tocAnchor-1-1">Patterns</h2>
+
+<h3 id="tocAnchor-1-1-1">1. Cache-aside Pattern</h3>
+
+<h3 id="tocAnchor-1-1-2">2. Circuit Breaker Pattern</h3>
+
+<p>Circuite Breaker 就是断路器，该设计模式用来避免不必要的重试，从而避免雪崩效应。</p>
+
+<p>断路器有3种状态：</p>
+<ul>
+  <li><strong>Closed</strong>：表示断路器是接通的，即认为后端的服务都是正常的，此时请求将会被正常地提交到服务。当短时间内针对某个服务或资源的失败调用过多时，即当短期内有超过阈值的失败出现时，状态变为 Open；</li>
+  <li><strong>Open</strong>：表示断路器是断开的，即认为后端的服务出现问题了，此时请求不会提交到服务，而是直接返回失败。进入该状态时，一般会设置一个定时器，定时器到期时把断路器置为 Half-Open 状态；</li>
+  <li><strong>Half-Open</strong>：表示一种中间状态，断路器不确定后端的服务是否正常，此时会允许部分请求提交到后端，如果这些请求成功了，那就把状态设置为 Closed，否则就回到 Open 状态。</li>
+</ul>
+
+<p>代码实现上，可以创建一个 Circuit Breaker ，把对服务请求相关的逻辑包裹起来。如果是被断路器阻止了，则返回一种特殊的异常，做特殊的处理。</p>
+
+<p>一般还需要一个手工开关，可以把断路器强制设置为某种状态。</p>
+
+<p>在 Half-Open 状态时，除了被动地检查成功和失败数，还可以通过主动的健康检查，来决定下一步的状态。</p>
+
+<h3 id="tocAnchor-1-1-3">3. Compensating Transaction Pattern</h3>
+
+<h3 id="tocAnchor-1-1-4">4. Competing Consumers Pattern</h3>
+
+<h3 id="tocAnchor-1-1-5">5. Compute Resource Consolidation Pattern</h3>
+
+<h3 id="tocAnchor-1-1-6">6. Command and Query Responsibility Segregation (CQRS) Pattern</h3>
+
+<h3 id="tocAnchor-1-1-7">7. Event Sourcing Pattern</h3>
+
+<h3 id="tocAnchor-1-1-8">8. External Configuration Store Pattern</h3>
+
+<h3 id="tocAnchor-1-1-9">9. Federated Identity Pattern</h3>
+
+<h3 id="tocAnchor-1-1-10">10. Gatekeeper Pattern</h3>
+
+<h3 id="tocAnchor-1-1-11">11. Health Endpoint Monitoring Pattern</h3>
+
+<h3 id="tocAnchor-1-1-12">12. Index Table Pattern</h3>
+
+<h3 id="tocAnchor-1-1-13">13. Leader Election Pattern</h3>
+
+<h3 id="tocAnchor-1-1-14">14. Materialized View Pattern</h3>
+
+<h3 id="tocAnchor-1-1-15">15. Pipes and Filters Pattern</h3>
+
+<h3 id="tocAnchor-1-1-16">16. Priority Queue Pattern</h3>
+
+<h3 id="tocAnchor-1-1-17">17. Queue-Based Load Leveling Pattern</h3>
+
+<h3 id="tocAnchor-1-1-18">18. Retry Pattern</h3>
+
+<h3 id="tocAnchor-1-1-19">19. Runtime Reconfiguration Pattern</h3>
+
+<h3 id="tocAnchor-1-1-20">20. Scheduler Agent Supervisor Pattern</h3>
+
+<h3 id="tocAnchor-1-1-21">21. Sharding Pattern</h3>
+
+<h3 id="tocAnchor-1-1-22">22. Static Content Hosting Pattern</h3>
+
+<h3 id="tocAnchor-1-1-23">23. Throttling Pattern</h3>
+
+<h3 id="tocAnchor-1-1-24">24. Valet Key Pattern</h3>
+
+<h2 id="tocAnchor-1-26">Guidances</h2>
+
+<h3 id="tocAnchor-1-26-1">1. Asynchronous Messaging Primer</h3>
+
+<h3 id="tocAnchor-1-26-2">2. Autoscaling Guidance</h3>
+
+<h3 id="tocAnchor-1-26-3">3. Caching Guidance</h3>
+
+<h3 id="tocAnchor-1-26-4">4. Compute Partitioning Guidance</h3>
+
+<h3 id="tocAnchor-1-26-5">5. Data Consistency Primer</h3>
+
+<h3 id="tocAnchor-1-26-6">6. Data Partitioning Guidance</h3>
+
+<h3 id="tocAnchor-1-26-7">7. Data Replication and Synchronization Guidance</h3>
+
+<h3 id="tocAnchor-1-26-8">8. Instrumentation and Telemetry Guidance</h3>
+
+<h3 id="tocAnchor-1-26-9">9. Multiple Datacenter Deployment Guidance</h3>
+
+<h3 id="tocAnchor-1-26-10">10. Service Metering Guidance</h3>
+
+
+  </div>
+
+  
+</article>
+
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>
+            
+              做美好的人，做酷的事
+            
+            </li>
+            
+            <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+            
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16" width="16px" height="16px"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>
