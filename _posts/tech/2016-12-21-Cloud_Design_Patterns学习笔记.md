@@ -16,6 +16,16 @@ Cloud Design Patterns 学习笔记
 
 ### 1. Cache-aside Pattern
 
+如果一个 cache 服务没有提供 read-through 和 write-through/write-behind 的功能，比如存粹的缓存服务如
+redis 或 memcached 等。可以通过 cache-aside pattern 来模拟 read-through 和
+write-through/write-behind 的功能。
+
+大概的过程是：
+1. APP 查看 cache 中是否有需要的数据，有的话直接拿到；
+2. 如果没有，就从数据存储服务中拿到这个数据；
+3. 在主动的往 cache 中存入这份数据。
+
+
 ### 2. Circuit Breaker Pattern
 
 Circuite Breaker 就是断路器，该设计模式用来避免不必要的重试，从而避免雪崩效应。
@@ -33,6 +43,18 @@ Circuite Breaker 就是断路器，该设计模式用来避免不必要的重试
 
 
 ### 3. Compensating Transaction Pattern
+
+补偿事务模式。
+
+一个事务，可能包含一系列的步骤，每个步骤需要调用不同的服务完成。
+通过这一系列的步骤，整体上实现最终一致性（eventually consistent）。
+
+所谓的 Compensating Transaction Pattern 就是指，当其中的某一步失败时（经过了一些重试后），
+系统自动进行一些列的补偿步骤，比如把之前已经成功的那些步骤回滚掉，实现最终一致性。
+这些补偿步骤自己也是有可能会失败的，实现过程中会有一些重试，所以补偿步骤需要是幂等的。
+
+补偿步骤不一定要正好是事务步骤的逆序，而是应该根据具体业务具体实现。
+
 
 ### 4. Competing Consumers Pattern
 
