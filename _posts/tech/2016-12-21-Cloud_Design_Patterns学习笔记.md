@@ -58,7 +58,11 @@ Circuite Breaker 就是断路器，该设计模式用来避免不必要的重试
 
 ### 4. Competing Consumers Pattern
 
+这个模式很简单，其实就是引入一个消息队列。Consumers 从队列中获取任务执行。
+
 ### 5. Compute Resource Consolidation Pattern
+
+
 
 ### 6. Command and Query Responsibility Segregation (CQRS) Pattern
 
