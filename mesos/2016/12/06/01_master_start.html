@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Mesos 源码学习(1) Mesos Master 的启动</title>
-  <meta name="description" content="Mesos Master 启动相关的代码在 src/master/main.cpp 中。">
+  <meta name="description" content="Mesos Master 启动相关的代码在 src/master/main.cpp 中。 解析 flags 参数 通过解析以 MESOS_ 开头的环境变量，来初始化一些参数，并验证参数的合法性。 具体的参数参考 Mesos Configuration。 初始化 master process 初始化一个 name ...">
 
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="/mesos/2016/12/06/01_master_start.html">

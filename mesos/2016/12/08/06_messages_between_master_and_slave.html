@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Mesos 源码学习(6) Master 和 Slave 之间的消息</title>
-  <meta name="description" content="Slave 向 Master 注册">
+  <meta name="description" content="Slave 向 Master 注册 注册总流程 Slave 初始化的最后，会做 Recovery ，而 Recovery 的最后，则调用 detector-&amp;gt;detect() 方法找到 leader master ，找到后，就回调 Slave:detected 方法。改方法的主要逻辑是： 暂停 Status...">
 
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="/mesos/2016/12/08/06_messages_between_master_and_slave.html">

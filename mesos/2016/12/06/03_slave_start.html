@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Mesos 源码学习(3) Mesos Slave 的启动</title>
-  <meta name="description" content="Mesos Slave 启动相关的代码在 src/slave/main.cpp 中。 很多过程和 master 的启动过程类似。">
+  <meta name="description" content="Mesos Slave 启动相关的代码在 src/slave/main.cpp 中。 很多过程和 master 的启动过程类似。 解析命令行参数 和 master 类似，不赘。 初始化 Libprocess 首先为 slave 生成一个 slave ID： const string id = process::I...">
 
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="/mesos/2016/12/06/03_slave_start.html">

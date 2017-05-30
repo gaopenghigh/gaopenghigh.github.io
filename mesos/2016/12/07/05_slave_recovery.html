@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Mesos 源码学习(5) Slave Recovery</title>
-  <meta name="description" content="在 Slave 初始化的最后，会进行 recovery ：">
+  <meta name="description" content="在 Slave 初始化的最后，会进行 recovery ： void Slave::initialize() { ... // Do recovery. async(&amp;amp;state::recover, metaDir, flags.strict) .then(defer(self(), &amp;amp;Slave...">
 
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="/mesos/2016/12/07/05_slave_recovery.html">

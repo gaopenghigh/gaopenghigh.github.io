@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Mesos 源码学习(2) Mesos Master 初始化</title>
-  <meta name="description" content="Master 初始化的代码实现在 src/master/master.cpp 中：">
+  <meta name="description" content="Master 初始化的代码实现在 src/master/master.cpp 中： void Master::initialize() { ... } 下面列出主要步骤。 参数合法性检查 不合法时直接退出。 权限相关的初始化 初始化了如下一些东西： Option&amp;lt;Credentials&amp;gt; creden...">
 
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="/mesos/2016/12/06/02_master_initialize.html">
