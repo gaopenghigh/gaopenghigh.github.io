@@ -156,29 +156,150 @@ Event 的发布，很可能是“至少一次（at least once”的策略，所�
 该模式的目的在于增加一层安全性保障。
 
 
+### Gateway Aggregation Pattern
+
+有时候，Client 依赖多个 service，Client 需要请求这些 service 然后合并成为一个结果。
+当 Client 与 Service 之间网络不够好时，这会引入严重的性能问题。
+
+Gateway Aggration Pattern 是指在 Client 和 Services 之间引入一个 Gateway，Client 发送一个请求给 Gateway，Gateway 再去请求依赖的所有服务，把这些服务的返回聚合成为一个结果，最后返回给 Client。
+
+
+### Gateway Offloading Pattern
+
+这个模式就是把一些 Service 之间共享的特性，集中到一个新的 Gateway 层进行。
+这个特性尤其适用于证书管理、鉴权、SSL termination、监控、协议转换、流量控制等等。
+
+
+### Gateway Routing Pattern
+
+就是最常见的的 Gateway 路由模式，service 不直接暴露给 client，而是统一经由 Gateway 进行路由。
+
+
 ### Health Endpoint Monitoring Pattern
+
+这是非常有用的一个模式，Service 对外暴露一个接口，可以查询当前 Service 的健康状况。
+
+要点：
+* 返回信息的多少、实现难度以及对性能的影响，这三个方面需要有合适的的折中；
+* 可以考虑暴露多个健康检查接口，分别检查不同重要性的健康情况；
+* 健康检查的结果可以适当缓存，以减少对性能的影响；
+* 健康检查接口需要考虑安全性；
+
 
 ### Index Table Pattern
 
+这是最常用的设计模式之一。就是为需要查询的数据生成一个索引表。
+
+
 ### Leader Election Pattern
+
+就是常用的选主模式。大量的分布式系统都用了该模式，并且可以基于 ZooKeeper，etcd，Consul 等开源软件快速地实现 Leader Election。
+
 
 ### Materialized View Pattern
 
+当做数据的存储是，基于不同的存储服务，开发者考虑的往往是“写友好”，而不是“读友好”。
+这就导致一些查询的请求，可能需要从存储服务读很多次，才能合并出需要的结果。
+
+该模式的思路，就是主动地生成一些方便读取查询的结果（Materialized View）。这些结果永远不会被直接更新，可以看做是一种特殊的缓存。这些缓存可能存储在完全不同的存储服务上。
+
+需要考虑的点：
+1. 什么时候去更新这些 Materialized View，一帮情况下，可以使用一个任务，或通过某种触发来生成 View。
+2. 考虑数据一致性，这是所有缓存都需要考虑的点。
+3. 考虑为 Materialized View 创建索引表，进一步优化查询性能。
+
+
 ### Pipes and Filters Pattern
+
+就是把一个任务分解成一系列的小任务（Filter），然后用管道（Pipe）串联起来，数据在管道中流通。
+好处是：
+1. 可以根据每一个 Filter 自身的情况为其分配资源；
+2. 利于扩展改造；
+
+由于每一个 Filter 实例可能会失败，这会导致同一份数据在 Filter 的两个实例上被执行两次，这就：
+1. Filter 需要是幂等的。
+2. Pipeline 需要能够检查并且去除重复消息。
+
+该模式可以和补偿事务模式（Compensating Transaction Pattern）一起使用，来实现分布式事务。
+因为一个分布式事务可以拆分成为多 Filter，每个 Filter 自身再实现补偿事务模式。
+
 
 ### Priority Queue Pattern
 
+对于需要区分优先级的任务的处理，可以通过引入一个优先级队列来实现。
+
+这种模式还有几个变种。
+
+第一个变种是使用多个队列，每个优先级对应一个队列。有一个 Customer Pool，里面的 Customer 总是先试图从高优先级的队列中获取任务，没有的话在尝试下一优先级的队列。
+
+第二个变种是每个优先级对应一个队列，同时还对应一个 Customer Pool，根据优先级的大小确定 Pool 的大小。
+
+第三个变种是动态地改变优先级队列中元素的优先级，随着一个元素在队列中待的时间增加，它的优先级也会逐渐增加。
+
+多队列的方式，有利于系统性能和可扩展性的最大化。
+
+
 ### Queue-Based Load Leveling Pattern
+
+基于队列的负载均化模式。
+就是在 Service 之前引入一个队列，作为任务的缓冲区。这样可以避免突如其来的负载高峰。
+Service 根据自己的能力，按照一定的速率从队列中获取任务执行。
+
 
 ### Retry Pattern
 
-### Runtime Reconfiguration Pattern
+就是考虑失败的情况并按照一定策略重试。
+关键是根据业务情况，制定合适的重试策略。
+可以联合断路器模式（Circuit Breaker pattern）一起使用。
+
 
 ### Scheduler Agent Supervisor Pattern
 
+这个模式比较复杂，但很有用。
+
+在分布式的环境中，一个任务，经常会由一系列的步骤组成。
+每一个步骤又可能依赖于某个远程服务或远程资源。
+这些步骤按照一定的次序执行，只有当所有的步骤都成功时，这个任务才算作成功。
+
+Scheduler Agent Supervisor 模式包含了三种逻辑上的角色：
+1. Scheduler 的职责是保证任务的各个步骤按照业务需要的正确顺序执行。 Scheduler 需要维护每个步骤的状态信息，包括步骤的过期时间。这些信息存放在持久型数据存储服务中，叫做 state store。如果一个步骤需要调用远程服务，则把相应的信息发送给对应的 Agent。 
+2. Agent 负责代理一个远程服务或远程资源，收到一个消息/请求后，它会根据消息的内容，调用自己代理的远程服务，然后把结果返回给 Scheduler。 Agent需要自己实现重试等机制。每一个远程服务都
+3. Supervisor 周期性地运行，负责监控由 Scheduler 执行的所有步骤是否在规定的时间内正确完成。
+
+Scheduler，Agent 和 Supervisor 都可以以多实例运行。不过 Supervisor 的多实例之间需要互相同步状态，或者通过 Leader Election 模式选主运行。
+
+这个设计模式的工作方式如下：
+1. Application 需要运行一个任务时，就向 Scheduler 提交一个请求。
+2. Scheduler 收到请求后，在 state store 中初始化该任务以及它所有步骤的状态，然后根据业务逻辑顺序来执行步骤。这些步骤必须是幂等的。
+3. 如果一个步骤依赖远程服务，Scheduler 就像对应的 Agent 发送一个消息。
+4. Agent 收到消息后，根据其内容，调用远程服务，同时还会根据消息中的过期时间，决定是否需要终止执行。如果一切正常，Agent 会向 Scheduler 发送一个运行成功的消息。如果 Agent 没在过期时间前完成工作，则不会向 Scheduler 发送任何消息。
+5. Supervisor 会定期检查 state store 中的所有状态，看看有哪些步骤超时了或失败了，然后尝试恢复它们。这可以通过更新步骤的过期时间，然后通知 Scheduler 实现。也可以通过 Scheduler 主动轮询 state store 实现。如果一个步骤一直失败，Supervisor 还需要知道什么时候不应该再尝试，或者进一步实现更复杂的策略。Supervisor 最本质的责任，就是当一个步骤失败是，决定是重试该步骤，还是让整个任务失败掉。
+6. Scheduler 本身也会异常，所以当一个 Scheduler Fail 时，新的或其他的 Scheduler 需要能够恢复那些执行了一半的任务。
+
+Scheduler Agent Supervisor 设计模式最核心的优点，就是在分布式环境下的那些临时的、意外的和不可恢复的异常情况下，整个系统是可“自恢复”的。
+
+
 ### Sharding Pattern
 
+就是常用的分片（Sharding）模式。关键是根据业务，选择合适的 Sharding 策略。
+
+
+### Sidecar Pattern
+
+一个 Application 可能需要一系列的附加功能，比如监控、日志、配置等等。
+这些服务和 App 本身的关系不大，可以和 App 的每一个实例部署在一起。
+就像边三轮摩托车的 Sidecar 一样。
+容器天然适合 Sidecar 模式，每个 App 的容器都附带一个 Sidecar 容器。
+
+
 ### Static Content Hosting Pattern
+
+就是简单的动静分离模式，把静态内容放在合适的服务上。
+
+
+### Strangler Pattern
+
+
 
 ### Throttling Pattern
 
