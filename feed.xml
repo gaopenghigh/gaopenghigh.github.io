@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-07-20T14:33:18+08:00</updated><id>//</id><title type="html">做美好的人，做酷的事</title><subtitle>记录所学所想
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.3.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-07-20T14:35:30+08:00</updated><id>//</id><title type="html">做美好的人，做酷的事</title><subtitle>记录所学所想
 </subtitle><entry><title type="html">Cloud Design Patterns 学习笔记</title><link href="/tech/2017/07/20/Cloud_Design_Patterns%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.html" rel="alternate" type="text/html" title="Cloud Design Patterns 学习笔记" /><published>2017-07-20T14:30:00+08:00</published><updated>2017-07-20T14:30:00+08:00</updated><id>/tech/2017/07/20/Cloud_Design_Patterns%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0</id><content type="html" xml:base="/tech/2017/07/20/Cloud_Design_Patterns%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.html">&lt;p&gt;写于 2016-12-21 。&lt;/p&gt;
 
 &lt;h2 id=&quot;cloud-design-patterns-&quot;&gt;Cloud Design Patterns 学习笔记&lt;/h2&gt;
@@ -6,26 +6,24 @@
 &lt;p&gt;微软发布了 “&lt;a href=&quot;https://msdn.microsoft.com/en-us/library/dn568099.aspx&quot;&gt;Cloud Design Patterns: Prescriptive Architecture Guidance for Cloud Applications&lt;/a&gt; “。
 书中，针对云应用总结出了多种设计模式和 Guidance 。本文简要记录一下这些 pattern 和 guidance 的思想。&lt;/p&gt;
 
-&lt;h2 id=&quot;patterns&quot;&gt;Patterns&lt;/h2&gt;
-
-&lt;h3 id=&quot;ambassador-pattern&quot;&gt;Ambassador Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;ambassador-pattern&quot;&gt;Ambassador Pattern&lt;/h1&gt;
 
 &lt;p&gt;对于遗留服务，它们可能缺少一些我们需要的功能，但我们又离不开它们所提供的的服务。同时这些遗留服务往往都不方便进行改造。
 这时候就可以使用 Ambassador Patter，在客户端和服务端之间加一个“代理”，把原来的服务包装起来，提供我们需要的额外功能，比如重试、断路、监控、安全等等。&lt;/p&gt;
 
 &lt;p&gt;当然，加一个“代理”会代理更多的成本，有时候提供一个客户端的类库会是更好的方式。&lt;/p&gt;
 
-&lt;h3 id=&quot;anti-corruption-layer-pattern&quot;&gt;Anti-Corruption Layer Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;anti-corruption-layer-pattern&quot;&gt;Anti-Corruption Layer Pattern&lt;/h1&gt;
 
 &lt;p&gt;这个模式也是适用于遗留服务。简单地说就是在新服务和遗留服务之间建立一个转换层，所谓的 Anti-Corruption Layer。通过这一层保证新服务设计的干净，同时又能继续使用遗留服务，知道遗留服务都改造完成。&lt;/p&gt;
 
-&lt;h3 id=&quot;backends-for-frontends-pattern&quot;&gt;Backends for Frontends Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;backends-for-frontends-pattern&quot;&gt;Backends for Frontends Pattern&lt;/h1&gt;
 
 &lt;p&gt;即为每一种前端，建立专门的后端服务，这些后端服务又依赖同一套基础服务。
 好处是可以针对某种前端方便灵活地提供一些专有功能，而无需考虑其他前端的情况。
 代价显然是架构更复杂、模块更多、成本更大。&lt;/p&gt;
 
-&lt;h3 id=&quot;bulkhead-pattern&quot;&gt;Bulkhead Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;bulkhead-pattern&quot;&gt;Bulkhead Pattern&lt;/h1&gt;
 
 &lt;p&gt;Bulkhead 就是船舱里面的隔板。这些隔板把船舱分隔成很多段，当其中一个段损坏时，海水只会灌进这一个段，而其他段仍然保持完好，船也不会因此沉没。&lt;/p&gt;
 
@@ -35,7 +33,7 @@
 
 &lt;p&gt;另外，讲服务分组，还可以为每个组设置优先级，优先保证重要的业务。&lt;/p&gt;
 
-&lt;h3 id=&quot;cache-aside-pattern&quot;&gt;Cache-aside Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;cache-aside-pattern&quot;&gt;Cache-aside Pattern&lt;/h1&gt;
 
 &lt;p&gt;如果一个 cache 服务没有提供 read-through 和 write-through/write-behind 的功能，比如存粹的缓存服务如
 redis 或 memcached 等。可以通过 cache-aside pattern 来模拟 read-through 和
@@ -48,7 +46,7 @@ write-through/write-behind 的功能。&lt;/p&gt;
   &lt;li&gt;在主动的往 cache 中存入这份数据。&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&quot;circuit-breaker-pattern&quot;&gt;Circuit Breaker Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;circuit-breaker-pattern&quot;&gt;Circuit Breaker Pattern&lt;/h1&gt;
 
 &lt;p&gt;Circuite Breaker 就是断路器，该设计模式用来避免不必要的重试，从而避免雪崩效应。&lt;/p&gt;
 
@@ -66,7 +64,7 @@ write-through/write-behind 的功能。&lt;/p&gt;
 
 &lt;p&gt;在 Half-Open 状态时，除了被动地检查成功和失败数，还可以通过主动的健康检查，来决定下一步的状态。&lt;/p&gt;
 
-&lt;h3 id=&quot;command-and-query-responsibility-segregation-cqrs-pattern&quot;&gt;Command and Query Responsibility Segregation (CQRS) Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;command-and-query-responsibility-segregation-cqrs-pattern&quot;&gt;Command and Query Responsibility Segregation (CQRS) Pattern&lt;/h1&gt;
 
 &lt;p&gt;即所谓的“命令与查询职责分离”。日常经常说的“读写分离”，其实也算是 CQRS。&lt;/p&gt;
 
@@ -77,7 +75,7 @@ write-through/write-behind 的功能。&lt;/p&gt;
 读模型就是从 Event 中读取 Event stream，转换为需要的业务结构。
 这两个模式结合的缺点也很明显：读和写的延迟、额外的复杂性和处理 Event 需要的额外资源。&lt;/p&gt;
 
-&lt;h3 id=&quot;compensating-transaction-pattern&quot;&gt;Compensating Transaction Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;compensating-transaction-pattern&quot;&gt;Compensating Transaction Pattern&lt;/h1&gt;
 
 &lt;p&gt;补偿事务模式。&lt;/p&gt;
 
@@ -90,11 +88,11 @@ write-through/write-behind 的功能。&lt;/p&gt;
 
 &lt;p&gt;补偿步骤不一定要正好是事务步骤的逆序，而是应该根据具体业务具体实现。&lt;/p&gt;
 
-&lt;h3 id=&quot;competing-consumers-pattern&quot;&gt;Competing Consumers Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;competing-consumers-pattern&quot;&gt;Competing Consumers Pattern&lt;/h1&gt;
 
 &lt;p&gt;这个模式很简单，其实就是引入一个消息队列。Consumers 从队列中获取任务执行。&lt;/p&gt;
 
-&lt;h3 id=&quot;compute-resource-consolidation-pattern&quot;&gt;Compute Resource Consolidation Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;compute-resource-consolidation-pattern&quot;&gt;Compute Resource Consolidation Pattern&lt;/h1&gt;
 
 &lt;p&gt;业务逻辑经常包含多个任务，一般情况下，这些任务会部署在独立的计算单元中（虚拟机、容器等）。
 这个模式就是把一些任务打包在一起，放在同一个计算单元中运行。
@@ -105,7 +103,7 @@ write-through/write-behind 的功能。&lt;/p&gt;
 
 &lt;p&gt;所以把什么样的任务放在一起，需要仔细选择。一般适用于那些对资源要求不高的，大部分时间都在等待的任务。&lt;/p&gt;
 
-&lt;h3 id=&quot;event-sourcing-pattern&quot;&gt;Event Sourcing Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;event-sourcing-pattern&quot;&gt;Event Sourcing Pattern&lt;/h1&gt;
 
 &lt;p&gt;一般情况下，我们会存储数据的最新状态。
 Event Sourcing 模式利用 Log 的思想，把对数据的所有操作，当做一个个的 Event 存储起来。
@@ -115,13 +113,13 @@ Event Sourcing 模式利用 Log 的思想，把对数据的所有操作，当做
 
 &lt;p&gt;Event 的发布，很可能是“至少一次（at least once”的策略，所以订阅方需要保证 Event 的消费处理时幂等的。&lt;/p&gt;
 
-&lt;h3 id=&quot;external-configuration-store-pattern&quot;&gt;External Configuration Store Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;external-configuration-store-pattern&quot;&gt;External Configuration Store Pattern&lt;/h1&gt;
 
 &lt;p&gt;多个 App 之间，一个 App 的多个实例之间往往需要共享配置。
 这个模式就是指把配置存到一个外部的专门服务中。该服务提供接口，实现对配置的读和写。
 配置服务的实现上，需要考虑很多细节问题，比如权限控制、配置的多版本、配置的数据类型等等。&lt;/p&gt;
 
-&lt;h3 id=&quot;federated-identity-pattern&quot;&gt;Federated Identity Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;federated-identity-pattern&quot;&gt;Federated Identity Pattern&lt;/h1&gt;
 
 &lt;p&gt;联合身份模式，指 App 把身份认证教给专门的 ID Provider 来进行。优点是简化了 App 的开发，提升了用户体验。&lt;/p&gt;
 
@@ -134,29 +132,29 @@ Event Sourcing 模式利用 Log 的思想，把对数据的所有操作，当做
   &lt;li&gt;Client 使用这个 token 来请求 App/Service；&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&quot;gatekeeper-pattern&quot;&gt;Gatekeeper Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;gatekeeper-pattern&quot;&gt;Gatekeeper Pattern&lt;/h1&gt;
 
 &lt;p&gt;看门人模式，就是在 App/Service 之前专门增加一个 Gatekeeper 服务，该服务做请求的合法性校验、对请求进行一些清洗（sanitizes requests），然后在 Client 和 App/Services 之间传递数据。&lt;/p&gt;
 
 &lt;p&gt;该模式的目的在于增加一层安全性保障。&lt;/p&gt;
 
-&lt;h3 id=&quot;gateway-aggregation-pattern&quot;&gt;Gateway Aggregation Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;gateway-aggregation-pattern&quot;&gt;Gateway Aggregation Pattern&lt;/h1&gt;
 
 &lt;p&gt;有时候，Client 依赖多个 service，Client 需要请求这些 service 然后合并成为一个结果。
 当 Client 与 Service 之间网络不够好时，这会引入严重的性能问题。&lt;/p&gt;
 
 &lt;p&gt;Gateway Aggration Pattern 是指在 Client 和 Services 之间引入一个 Gateway，Client 发送一个请求给 Gateway，Gateway 再去请求依赖的所有服务，把这些服务的返回聚合成为一个结果，最后返回给 Client。&lt;/p&gt;
 
-&lt;h3 id=&quot;gateway-offloading-pattern&quot;&gt;Gateway Offloading Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;gateway-offloading-pattern&quot;&gt;Gateway Offloading Pattern&lt;/h1&gt;
 
 &lt;p&gt;这个模式就是把一些 Service 之间共享的特性，集中到一个新的 Gateway 层进行。
 这个特性尤其适用于证书管理、鉴权、SSL termination、监控、协议转换、流量控制等等。&lt;/p&gt;
 
-&lt;h3 id=&quot;gateway-routing-pattern&quot;&gt;Gateway Routing Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;gateway-routing-pattern&quot;&gt;Gateway Routing Pattern&lt;/h1&gt;
 
 &lt;p&gt;就是最常见的的 Gateway 路由模式，service 不直接暴露给 client，而是统一经由 Gateway 进行路由。&lt;/p&gt;
 
-&lt;h3 id=&quot;health-endpoint-monitoring-pattern&quot;&gt;Health Endpoint Monitoring Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;health-endpoint-monitoring-pattern&quot;&gt;Health Endpoint Monitoring Pattern&lt;/h1&gt;
 
 &lt;p&gt;这是非常有用的一个模式，Service 对外暴露一个接口，可以查询当前 Service 的健康状况。&lt;/p&gt;
 
@@ -168,15 +166,15 @@ Event Sourcing 模式利用 Log 的思想，把对数据的所有操作，当做
   &lt;li&gt;健康检查接口需要考虑安全性；&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&quot;index-table-pattern&quot;&gt;Index Table Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;index-table-pattern&quot;&gt;Index Table Pattern&lt;/h1&gt;
 
 &lt;p&gt;这是最常用的设计模式之一。就是为需要查询的数据生成一个索引表。&lt;/p&gt;
 
-&lt;h3 id=&quot;leader-election-pattern&quot;&gt;Leader Election Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;leader-election-pattern&quot;&gt;Leader Election Pattern&lt;/h1&gt;
 
 &lt;p&gt;就是常用的选主模式。大量的分布式系统都用了该模式，并且可以基于 ZooKeeper，etcd，Consul 等开源软件快速地实现 Leader Election。&lt;/p&gt;
 
-&lt;h3 id=&quot;materialized-view-pattern&quot;&gt;Materialized View Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;materialized-view-pattern&quot;&gt;Materialized View Pattern&lt;/h1&gt;
 
 &lt;p&gt;当做数据的存储是，基于不同的存储服务，开发者考虑的往往是“写友好”，而不是“读友好”。
 这就导致一些查询的请求，可能需要从存储服务读很多次，才能合并出需要的结果。&lt;/p&gt;
@@ -190,7 +188,7 @@ Event Sourcing 模式利用 Log 的思想，把对数据的所有操作，当做
   &lt;li&gt;考虑为 Materialized View 创建索引表，进一步优化查询性能。&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&quot;pipes-and-filters-pattern&quot;&gt;Pipes and Filters Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;pipes-and-filters-pattern&quot;&gt;Pipes and Filters Pattern&lt;/h1&gt;
 
 &lt;p&gt;就是把一个任务分解成一系列的小任务（Filter），然后用管道（Pipe）串联起来，数据在管道中流通。
 好处是：&lt;/p&gt;
@@ -208,7 +206,7 @@ Event Sourcing 模式利用 Log 的思想，把对数据的所有操作，当做
 &lt;p&gt;该模式可以和补偿事务模式（Compensating Transaction Pattern）一起使用，来实现分布式事务。
 因为一个分布式事务可以拆分成为多 Filter，每个 Filter 自身再实现补偿事务模式。&lt;/p&gt;
 
-&lt;h3 id=&quot;priority-queue-pattern&quot;&gt;Priority Queue Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;priority-queue-pattern&quot;&gt;Priority Queue Pattern&lt;/h1&gt;
 
 &lt;p&gt;对于需要区分优先级的任务的处理，可以通过引入一个优先级队列来实现。&lt;/p&gt;
 
@@ -222,19 +220,19 @@ Event Sourcing 模式利用 Log 的思想，把对数据的所有操作，当做
 
 &lt;p&gt;多队列的方式，有利于系统性能和可扩展性的最大化。&lt;/p&gt;
 
-&lt;h3 id=&quot;queue-based-load-leveling-pattern&quot;&gt;Queue-Based Load Leveling Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;queue-based-load-leveling-pattern&quot;&gt;Queue-Based Load Leveling Pattern&lt;/h1&gt;
 
 &lt;p&gt;基于队列的负载均化模式。
 就是在 Service 之前引入一个队列，作为任务的缓冲区。这样可以避免突如其来的负载高峰。
 Service 根据自己的能力，按照一定的速率从队列中获取任务执行。&lt;/p&gt;
 
-&lt;h3 id=&quot;retry-pattern&quot;&gt;Retry Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;retry-pattern&quot;&gt;Retry Pattern&lt;/h1&gt;
 
 &lt;p&gt;就是考虑失败的情况并按照一定策略重试。
 关键是根据业务情况，制定合适的重试策略。
 可以联合断路器模式（Circuit Breaker pattern）一起使用。&lt;/p&gt;
 
-&lt;h3 id=&quot;scheduler-agent-supervisor-pattern&quot;&gt;Scheduler Agent Supervisor Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;scheduler-agent-supervisor-pattern&quot;&gt;Scheduler Agent Supervisor Pattern&lt;/h1&gt;
 
 &lt;p&gt;这个模式比较复杂，但很有用。&lt;/p&gt;
 
@@ -263,27 +261,27 @@ Service 根据自己的能力，按照一定的速率从队列中获取任务执
 
 &lt;p&gt;Scheduler Agent Supervisor 设计模式最核心的优点，就是在分布式环境下的那些临时的、意外的和不可恢复的异常情况下，整个系统是可“自恢复”的。&lt;/p&gt;
 
-&lt;h3 id=&quot;sharding-pattern&quot;&gt;Sharding Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;sharding-pattern&quot;&gt;Sharding Pattern&lt;/h1&gt;
 
 &lt;p&gt;就是常用的分片（Sharding）模式。关键是根据业务，选择合适的 Sharding 策略。&lt;/p&gt;
 
-&lt;h3 id=&quot;sidecar-pattern&quot;&gt;Sidecar Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;sidecar-pattern&quot;&gt;Sidecar Pattern&lt;/h1&gt;
 
 &lt;p&gt;一个 Application 可能需要一系列的附加功能，比如监控、日志、配置等等。
 这些服务和 App 本身的关系不大，可以和 App 的每一个实例部署在一起。
 就像边三轮摩托车的 Sidecar 一样。
 容器天然适合 Sidecar 模式，每个 App 的容器都附带一个 Sidecar 容器。&lt;/p&gt;
 
-&lt;h3 id=&quot;static-content-hosting-pattern&quot;&gt;Static Content Hosting Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;static-content-hosting-pattern&quot;&gt;Static Content Hosting Pattern&lt;/h1&gt;
 
 &lt;p&gt;就是简单的动静分离模式，把静态内容放在合适的服务上。&lt;/p&gt;
 
-&lt;h3 id=&quot;strangler-pattern&quot;&gt;Strangler Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;strangler-pattern&quot;&gt;Strangler Pattern&lt;/h1&gt;
 
 &lt;p&gt;老的系统有时需要更新、升级、重构为新系统，这将是一个持续的过程。
 Strangler 模式就是把新老系统都接入一个 Strangler 层，Strangler 把改造好了的接口路由给新系统，没有改造好的系统路由给老系统。当整个系统改造完成后，老系统就没有任何请求，可以下线了。&lt;/p&gt;
 
-&lt;h3 id=&quot;throttling-pattern&quot;&gt;Throttling Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;throttling-pattern&quot;&gt;Throttling Pattern&lt;/h1&gt;
 
 &lt;p&gt;系统压力可能会出现突然的变化，Throttling Pattern 就是通过一定的限制策略，让整个系统的资源消耗保持在安全范围内。&lt;/p&gt;
 
@@ -294,7 +292,7 @@ Strangler 模式就是把新老系统都接入一个 Strangler 层，Strangler �
   &lt;li&gt;通过引入 Queue-Based Load Leveling Pattern 来避免负载高峰&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&quot;valet-key-pattern&quot;&gt;Valet Key Pattern&lt;/h3&gt;
+&lt;h1 id=&quot;valet-key-pattern&quot;&gt;Valet Key Pattern&lt;/h1&gt;
 
 &lt;p&gt;有些服务，比如文件的上传下载，往往是由专业的云服务来提供。
 Application 只负责管理控制这些资源，而不负责资源本身的处理。
@@ -305,8 +303,6 @@ Cloud Design Patterns 学习笔记
 
 微软发布了 “Cloud Design Patterns: Prescriptive Architecture Guidance for Cloud Applications “。
 书中，针对云应用总结出了多种设计模式和 Guidance 。本文简要记录一下这些 pattern 和 guidance 的思想。
-
-Patterns
 
 Ambassador Pattern
 
