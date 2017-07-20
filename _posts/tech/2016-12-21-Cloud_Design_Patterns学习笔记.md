@@ -299,35 +299,23 @@ Scheduler Agent Supervisor 设计模式最核心的优点，就是在分布式�
 
 ### Strangler Pattern
 
+老的系统有时需要更新、升级、重构为新系统，这将是一个持续的过程。
+Strangler 模式就是把新老系统都接入一个 Strangler 层，Strangler 把改造好了的接口路由给新系统，没有改造好的系统路由给老系统。当整个系统改造完成后，老系统就没有任何请求，可以下线了。
 
 
 ### Throttling Pattern
 
+系统压力可能会出现突然的变化，Throttling Pattern 就是通过一定的限制策略，让整个系统的资源消耗保持在安全范围内。
+
+限制策略包括：
+1. 解决部分请求，比如当一个用户每秒请求数超过每个阈值之后，就不再提供服务；
+2. 服务降级，次要的服务把资源让给重要的服务使用
+3. 通过引入 Queue-Based Load Leveling Pattern 来避免负载高峰
+
+
 ### Valet Key Pattern
 
-
-## Guidances
-
-### Asynchronous Messaging Primer
-
-### Autoscaling Guidance
-
-
-
-### Caching Guidance
-
-### Compute Partitioning Guidance
-
-### Data Consistency Primer
-
-### Data Partitioning Guidance
-
-### Data Replication and Synchronization Guidance
-
-### Instrumentation and Telemetry Guidance
-
-### Multiple Datacenter Deployment Guidance
-
-### Service Metering Guidance
-
-
+有些服务，比如文件的上传下载，往往是由专业的云服务来提供。
+Application 只负责管理控制这些资源，而不负责资源本身的处理。
+Valet Key 模式，就是指当 Client 请求对一个资源进行操作时，返回给 Client 一个 token，叫做 valet token，Client 拿着这个 token 去请求其他服务。
+资源服务通过 Token 可以知道这个 Client 所拥有的权限，以及这些权限的有效期。
