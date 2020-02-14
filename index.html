@@ -7,15 +7,57 @@ layout: default
   <h1 class="page-heading">Posts</h1>
 
   <ul class="post-list">
-    {% for post in site.posts %}
-      <li>
-        <span class="post-meta">{{ post.date | date: "%b %-d, %Y" }}</span>
 
-        <h2>
-          <a class="post-link" href="{{ post.url | prepend: site.baseurl }}">{{ post.title }}</a>
-        </h2>
+
+    <h1>思考</h1>
+    <ul>
+      {% for post in site.posts %}
+      {% if post.categories contains "Thoughts" %}
+      <li>
+        <span class="post-meta">{{ post.date | date: "%Y-%m-%d" }}</span>
+        <a class="" href="{{ post.url | prepend: site.baseurl }}">{{ post.title | escape }}</a>
       </li>
-    {% endfor %}
+      {% endif %}
+      {% endfor %}
+    </ul>
+
+    <h1>读书</h1>
+    <ul>
+      {% for post in site.posts %}
+      {% if post.categories contains "Reading" %}
+      <li>
+        <span class="post-meta">{{ post.date | date: "%Y-%m-%d" }}</span>
+        <a class="" href="{{ post.url | prepend: site.baseurl }}">{{ post.title | escape }}</a>
+      </li>
+      {% endif %}
+      {% endfor %}
+    </ul>
+
+    <h1>技术</h1>
+
+    <ul>
+      {% for post in site.posts %}
+      {% if post.categories contains "Tech" %}
+      <li>
+        <span class="post-meta">{{ post.date | date: "%Y-%m-%d" }}</span>
+        <a class="" href="{{ post.url | prepend: site.baseurl }}">{{ post.title | escape }}</a>
+      </li>
+      {% endif %}
+      {% endfor %}
+    </ul>
+
+    <h3>Mesos</h3>
+    <ul>
+      {% for post in site.posts %}
+      {% if post.categories contains "Mesos" %}
+      <li>
+        <span class="post-meta">{{ post.date | date: "%Y-%m-%d" }}</span>
+        <a class="" href="{{ post.url | prepend: site.baseurl }}">{{ post.title | escape }}</a>
+      </li>
+      {% endif %}
+      {% endfor %}
+    </ul>
+
   </ul>
 
   <p class="rss-subscribe">subscribe <a href="{{ "/feed.xml" | prepend: site.baseurl }}">via RSS</a></p>
