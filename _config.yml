@@ -1,0 +1,11 @@
+title: 做美好的人，做酷的事
+email: gaopenghigh@gmail.com
+description: > # this means to ignore newlines until "baseurl:"
+  记录所学所想
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "http://gaopenghigh.github.io" # the base hostname & protocol for your site, e.g. http://example.com
+github_username:  gaopenghigh
+
+# Build settings
+markdown: kramdown
+destination: docs/

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 <generator uri="http://jekyllrb.com" version="3.3.0">Jekyll</generator>
@@ -713,3 +714,35 @@ Valet Key 模式，就是指当 Client 请求对一个资源进行操作时，�
 <summary>写于 2016-12-31 。德鲁克在这本书中记录了一些在他生命中留下深刻痕迹的人。没有系统的概念和知识，对于读者，这本书的价值就在于让我们了解到世界上人的多样性，让我们看一看，是什么样的人让德鲁克印象深刻，是什么样的人在影响着这个世界。如果要为这本书归纳一个中心思想，那就是：人很复杂，大部分情况没有好坏，只有差异，管理的最核心理念就是理解人性。对同一个目标，途径可以有很多种。 同一件事，可以由个性完全不同的两个人来做，并且都可以做得非常好。管理不应该有定式，而应该因人而异。东方智慧很早就对此深有领悟，于是有了孔子的因材施教，有了禅宗的各种公案。做事情的模式、技巧，只不过是一些较为通用的规则，这些规则施加到不同个性的人身上，效果也可能完全不同。关键在于认清楚目标，然后根据具体的人来不断调整具体的方法。固定的应该是目标，而非方法。领导者的核心意义就在于做决策。而关于人的那些决策，又是对一个组织影响最大的。目标不应该是统一和标准，而是多样、包容、协作和平衡。组织像是生物，体内是一个复杂的平衡体系。只有够复杂、够平衡的生物，才能更好地适应环境的变化。每个人都有局限性。我们很容易看到别人的局限性，却很难看清楚自己的局限性。打破局限性，除了自身的努力，更需要机缘。对自己，对别人，都不应该过分要求。有时候不是不够努力，只是没有缘分。跨过一个局限之后，会看到更大的世界，有些事情变得更简单了，也有些事情变得更复杂了，解决了很多问题，又生出了更多的问题，然后又面临着新的局限性。人生就像山丘，翻过了一座，还有下一座。眼界决定行为，见识越宽，对这个世界看得越清，越能理解本源，也越能看清楚自己的位置和局限，于是做出更好的行为。每个时代都有其局限性，每个人除了被自身的局限性限制外，还深处在时代的局限性中，而后者，只有旷世天才才能突破。要求一个人以超越时代的方式思考行为，是无理的，同样，要求一个人一开始就行事妥当，也是不可能的，18岁的人不可能做出50岁的事。</summary>
 </entry>
 </feed>
+=======
+---
+layout: null
+---
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>{{ site.title | xml_escape }}</title>
+    <description>{{ site.description | xml_escape }}</description>
+    <link>{{ site.url }}{{ site.baseurl }}/</link>
+    <atom:link href="{{ "/feed.xml" | prepend: site.baseurl | prepend: site.url }}" rel="self" type="application/rss+xml"/>
+    <pubDate>{{ site.time | date_to_rfc822 }}</pubDate>
+    <lastBuildDate>{{ site.time | date_to_rfc822 }}</lastBuildDate>
+    <generator>Jekyll v{{ jekyll.version }}</generator>
+    {% for post in site.posts limit:10 %}
+      <item>
+        <title>{{ post.title | xml_escape }}</title>
+        <description>{{ post.content | xml_escape }}</description>
+        <pubDate>{{ post.date | date_to_rfc822 }}</pubDate>
+        <link>{{ post.url | prepend: site.baseurl | prepend: site.url }}</link>
+        <guid isPermaLink="true">{{ post.url | prepend: site.baseurl | prepend: site.url }}</guid>
+        {% for tag in post.tags %}
+        <category>{{ tag | xml_escape }}</category>
+        {% endfor %}
+        {% for cat in post.categories %}
+        <category>{{ cat | xml_escape }}</category>
+        {% endfor %}
+      </item>
+    {% endfor %}
+  </channel>
+</rss>
+>>>>>>> source
