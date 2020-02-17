@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Linux 文件的属性</title>
+  <meta name="description" content="Linux 文件的属性">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/03/06/inux_file_attr.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Linux 文件的属性</h1>
+    <p class="post-meta"><time datetime="2013-03-06T10:00:00+08:00" itemprop="datePublished">Mar 6, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="linux-文件的属性">Linux 文件的属性</h1>
+
+<p>本文主要介绍了文件的隐藏属性和特殊权限，一个让脚本具有类似SUID位的技巧，还有一个解决mp3文件乱码的方法。
+从最开始接触Linux到现在已经有5年了，和所有人一样，少不了折腾。折腾后偶尔我会把方法记录下来，现在简单总结一下。
+所以的命令功能通过man都能找到具体用法，我只把自己觉得常用的列举出来。</p>
+
+<h3 id="文件的隐藏属性">文件的隐藏属性</h3>
+
+<ul>
+  <li><code class="highlighter-rouge">lsattr</code> : 列出文件的隐藏属性</li>
+  <li>
+    <p><code class="highlighter-rouge">chattr</code> : 修改文件的隐藏属性</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  [root@www ~]# chattr [+-=][ASacdistu] FileName
+  + : Add one attribute
+  - : Remove one attribute
+  = : Set to be the only attributes that the files have
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<p>重要选项</p>
+
+<ul>
+  <li>“a”：只能追加文件的内容，但不能修改或删除内容</li>
+  <li>“i”：文件不能被删除、改名、不能创建指向它的链接，不能向文件写内容</li>
+</ul>
+
+<h3 id="文件的特殊权限-suidsgidsticky-bit">文件的特殊权限 SUID/SGID/Sticky Bit</h3>
+
+<p>如果对一个可执行文件设置了SUID或者SGID位，则文件执行时，将会拥有文件所有者（设置了SUID）或者所在组（设置了SGID）的权限。</p>
+
+<p>例子：普通用户不能开启httpd服务，因为httpd服务需要用到80端口，而1024以下的端口只有root用户才能使用。如果我们把httpd可执行文件的所有者设置为root，同时设置SUID位，则普通用户也可以开启httpd服务了。</p>
+
+<p>对一个目录设置了Sticky位，则只有文件的所有者能删除这个文件。在Linux系统中，/tmp目录默认设置了这个位：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>drwxrwxrwt 12 root root 16384 Mar 6 09:04 tmp/
+</code></pre></div></div>
+
+<p>主要使用方法如下：</p>
+
+<p><strong>SUID</strong></p>
+
+<ul>
+  <li>对于文件：以文件所有者的权限运行</li>
+  <li>对于目录：不能对目录设置SUID</li>
+</ul>
+
+<p>设置SUID：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>chmod u+s FILE chmod 4755 FILE
+</code></pre></div></div>
+
+<p><strong>SGID</strong></p>
+
+<ul>
+  <li>对于文件：以文件所属组的权限运行</li>
+  <li>对于目录：目录里面的文件会继承目录的属性</li>
+</ul>
+
+<p>设置SGID：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>chmod g+s FILE/DIR chmod 2771 FILE/DIR
+</code></pre></div></div>
+
+<p><strong>Sticky</strong></p>
+
+<ul>
+  <li>对于文件：不能对文件设置Sticky位</li>
+  <li>对于目录：对于该目录下的文件，只有它们的所有者才能删除它们。</li>
+</ul>
+
+<p>设置Sticky：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>chmod o+t DIR chmod 1777 DIR
+</code></pre></div></div>
+
+<p>用字母设置特殊权限：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>u+s g+s o+t 用数字表示特殊权限，则是：
+
+4 for SUID
+2 for SGID
+1 for Sticky
+</code></pre></div></div>
+
+<h3 id="小花招">小花招</h3>
+
+<p>需要注意的是，shell、python、perl等脚本文件不能设置SUID位，因为它们事实上是由bash、python、perl解释器解释运行的。要让脚本文件也有类似于SUID这样的功能，需要做一点小花招。</p>
+
+<p>简单地说，我们需要一层壳，这层壳可以设置SUID/SGID位，壳里面真正工作的还是脚本。</p>
+
+<p>比如说我们有一个脚本<code class="highlighter-rouge">/home/jh/bin/myscript.sh</code>，所有者是普通用户，但脚本里面的操作需要root权限，现在我们用C语言来写这层壳，名称叫做<code class="highlighter-rouge">transeuid.c</code>：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/*
+* author: JH Gao &lt;gaopenghigh@gmail.com&gt;
+* Create Date: 2012-06-05
+* Function: transmit euid and egid to other scripts
+* since shell/python/... scripts can't get suid permission in Linux
+*/
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#define BUFFSIZE 1024
+/*
+* usually euid is the uid who run the program
+* but when stick is setted to the program
+* euid is the uid or the program's owner
+*/
+int main(int argc, char *argv[]) {
+    char *cmd = "/home/jh/bin/myscript.sh";
+    char *pars[] = {"/home/jh/bin/myscript.sh", "par1", "par2"};
+    /* set uid and gid to euid and egid */
+    setuid(geteuid());
+    setgid(getegid());
+    if (execvp(cmd, pars)) {
+        printf("error");
+        free(cmd);
+        exit(1);
+    }
+    free(cmd);
+}
+</code></pre></div></div>
+
+<p>编译这个程序，在给这个程序设置希望取得的用户，再设置suid，然后就可以用这个用户的权限执行脚本或命令了:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ gcc -t transeuid transeuid.c
+$ sudo chown root transeuid
+$ sudo chmod +s transeuid
+$ ./transeuid ......DO SOMETHING
+</code></pre></div></div>
+
+<p>当然具体要执行的脚本和参数可以从外部获取，具体看我以前写的：
+<a href="http://gaopenghigh.iteye.com/blog/1553535">《传递euid和egid给脚本，使脚本具有特殊用户的权限》</a>。</p>
+
+<p>但是需要注意的是，这种花招有很大的安全隐患。</p>
+
+<h3 id="最后linux中解决mp3文件乱码的命令是">最后Linux中解决mp3文件乱码的命令是：</h3>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>find . iname "*.mp3" -execdir mid3iconv -e gbk --remove-v1 {} \;
+</code></pre></div></div>
+
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

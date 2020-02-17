@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>内核中 hash 函数的实现</title>
+  <meta name="description" content="内核中 hash 函数的实现">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tech/2013/04/21/kernel_hash.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">内核中 hash 函数的实现</h1>
+    <p class="post-meta"><time datetime="2013-04-21T10:00:00+08:00" itemprop="datePublished">Apr 21, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="内核中-hash-函数的实现">内核中 hash 函数的实现</h1>
+
+<p>Linux内核中通过PID查找进程描述符<code class="highlighter-rouge">task_struct</code>时，用到了hash表。
+下面介绍一下这一部分内核中hash函数的实现。</p>
+
+<p>内核用<code class="highlighter-rouge">pid_hashfn</code>宏把PID转换为表索引(kernel/pid.c):</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#define pid_hashfn(nr, ns)  \
+    hash_long((unsigned long)nr + (unsigned long)ns, pidhash_shift)
+</code></pre></div></div>
+
+<p>其中<code class="highlighter-rouge">hash_long</code>在<code class="highlighter-rouge">&lt;linux/hash.h&gt;</code>中定义如下:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* 2^31 + 2^29 - 2^25 + 2^22 - 2^19 - 2^16 + 1 */
+#define GOLDEN_RATIO_PRIME_32 0x9e370001UL
+/*  2^63 + 2^61 - 2^57 + 2^54 - 2^51 - 2^18 + 1 */
+#define GOLDEN_RATIO_PRIME_64 0x9e37fffffffc0001UL
+
+#if BITS_PER_LONG == 32
+#define GOLDEN_RATIO_PRIME GOLDEN_RATIO_PRIME_32
+#define hash_long(val, bits) hash_32(val, bits)
+#elif BITS_PER_LONG == 64
+#define hash_long(val, bits) hash_64(val, bits)
+#define GOLDEN_RATIO_PRIME GOLDEN_RATIO_PRIME_64
+#else
+#error Wordsize not 32 or 64
+#endif
+
+static inline u64 hash_64(u64 val, unsigned int bits)
+{
+    u64 hash = val;
+
+    /*  Sigh, gcc can't optimise this alone like it does for 32 bits. */
+    u64 n = hash;
+    n &lt;&lt;= 18;
+    hash -= n;
+    n &lt;&lt;= 33;
+    hash -= n;
+    n &lt;&lt;= 3;
+    hash += n;
+    n &lt;&lt;= 3;
+    hash -= n;
+    n &lt;&lt;= 4;
+    hash += n;
+    n &lt;&lt;= 2;
+    hash += n;
+
+    /* High bits are more random, so use them. */
+    return hash &gt;&gt; (64 - bits);
+}
+
+static inline u32 hash_32(u32 val, unsigned int bits)
+{
+    /* On some cpus multiply is faster, on others gcc will do shifts */
+    u32 hash = val * GOLDEN_RATIO_PRIME_32;
+
+    /* High bits are more random, so use them. */
+    return hash &gt;&gt; (32 - bits);
+}
+
+static inline unsigned long hash_ptr(const void *ptr, unsigned int bits)
+{
+    return hash_long((unsigned long)ptr, bits);
+}
+#endif /* _LINUX_HASH_H */
+</code></pre></div></div>
+
+<p>上面的函数很有趣，我们来仔细看一下。</p>
+
+<p>首先，hash的方式是，让key乘以一个大数，于是结果溢出，就把留在32/64位变量中的值作为hash值，又由于散列表的索引长度有限，我们就取这hash值的高几为作为索引值，之所以取高几位，是因为高位的数更具有随机性，能够减少所谓“<strong>冲突</strong>”。什么是冲突呢？从上面的算法来看，key和hash值并不是一一对应的。有可能两个key算出来得到同一个hash值，这就称为“冲突”。</p>
+
+<p>那么，乘以的这个大数应该是多少呢？从上面的代码来看，32位系统中这个数是<code class="highlighter-rouge">0x9e370001UL</code>，64位系统中这个数是<code class="highlighter-rouge">0x9e37fffffffc0001UL</code>。这个数是怎么得到的呢？</p>
+
+<blockquote>
+  <p>“Knuth建议，要得到满意的结果，对于32位机器，2^32做黄金分割，这个大树是最接近黄金分割点的素数，<code class="highlighter-rouge">0x9e370001UL</code>就是接近 <code class="highlighter-rouge">2^32*(sqrt(5)-1)/2</code> 的一个素数，且这个数可以很方便地通过加运算和位移运算得到，因为它等于<code class="highlighter-rouge">2^31 + 2^29 - 2^25 + 2^22 - 2^19 - 2^16 + 1</code>。对于64位系统，这个数是<code class="highlighter-rouge">0x9e37fffffffc0001UL</code>，同样有<code class="highlighter-rouge">2^63 + 2^61 - 2^57 + 2^54 - 2^51 - 2^18 + 1</code>。”</p>
+</blockquote>
+
+<p>从程序中可以看到，对于32位系统计算hash值是直接用的乘法，因为gcc在编译时会自动优化算法。而对于64位系统，gcc似乎没有类似的优化，所以用的是位移运算和加运算来计算。
+首先<code class="highlighter-rouge">n=hash</code>,
+然后n左移18位，<code class="highlighter-rouge">hash-=n</code>，
+这样<code class="highlighter-rouge">hash = hash * (1 - 2^18)</code>，
+下一项是<code class="highlighter-rouge">-2^51</code>，而n之前已经左移过18位了，所以只需要再左移33位，
+于是有
+    n «= 33</p>
+
+<p>依次类推，最终算出了hash值。</p>
+
+<p>JH, 2013-04-21</p>
+
+<hr />
+
+<p>参考资料：</p>
+
+<ul>
+  <li>《深入理解Linux内核》</li>
+  <li>《Linux内核设计与实现》</li>
+</ul>
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

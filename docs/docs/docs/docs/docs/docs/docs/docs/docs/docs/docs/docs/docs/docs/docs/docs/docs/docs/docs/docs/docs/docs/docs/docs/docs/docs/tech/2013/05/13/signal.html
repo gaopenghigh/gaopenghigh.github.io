@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Linux 中的管道和 FIFO</title>
+  <meta name="description" content="Linux 中的信号">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/05/13/signal.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Linux 中的管道和 FIFO</h1>
+    <p class="post-meta"><time datetime="2013-05-13T10:00:00+08:00" itemprop="datePublished">May 13, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="linux-中的信号">Linux 中的信号</h1>
+
+<h2 id="信号的使用">信号的使用</h2>
+
+<h3 id="信号的概念">信号的概念</h3>
+
+<p>信号是通知进程发生了某件事的技术。每个信号都有一个名字，这些名字都以”SIG”开头。
+需要注意的是，SIGUSR1和SIGUSR2这两个信号是给用户自定义的，可用于应用程序。</p>
+
+<p>对于信号，内核有三种处理方式：</p>
+
+<ul>
+  <li>忽略。但有两种信号不能被忽略：SIGKILL和SIGSTOP，因为它们为超级用户提供了使进
+程终止或停止的可靠方法。</li>
+  <li>捕捉信号。前提是要提前通知内核在某个信号发生时调用用户的某个函数。</li>
+  <li>执行系统默认动作。对大部分信号的默认动作是终止进程。</li>
+</ul>
+
+<h3 id="signal函数">signal函数</h3>
+
+<p>signal函数是关于信号最基本的函数。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;signal.h&gt;
+void (*signal(int signo, void (*func)(int)))(int);
+</code></pre></div></div>
+
+<p>这个函数非常不直观，用正常一点的语言来说就是：</p>
+
+<ul>
+  <li>signal函数的返回指是一个函数地址，该函数没有返回值（void），并且需要一个int型
+的参数。</li>
+  <li>signal函数需要两个参数，第一个参数是signo，整型，代表信号名；第二个参数是func
+，这是一个函数地址，该函数没有返回值（void），且需要一个int型的参数。</li>
+  <li>总的来说signal函数就是注册一个信号signo，当这个信号发生时，调用func函数去处理
+，同时signal函数返回注册之前该信号的处理程序的指针。</li>
+</ul>
+
+<p>参数func可以是<code class="highlighter-rouge">SIG_DFL</code>，代表使用默认处理动作，还可以是<code class="highlighter-rouge">SIG_IGN</code>，代表忽略，当
+然更可以是其他具体的处理函数，这个函数就叫做<strong>信号处理程序（signal handler）</strong>
+或者信号捕捉程序（signal-catching function），此时处理动作就叫做捕捉。</p>
+
+<p>从signal的定义来看，不改变进程对信号的处理方式，就不能知道进程原本对信号的处理
+方式，稍后介绍的sigaction函数能解决这个问题。</p>
+
+<h3 id="信号相关的术语">信号相关的术语</h3>
+
+<p>信号产生（generation）后，内核会递送（delivery）这个信号给进程，在产生和递送的
+这个时间间隔内，称信号是“未决的（pending）”。</p>
+
+<p>进程可以选择对一些信号“阻塞”，当为进程产生了一个信号，且进程对该信号设置了阻塞
+，且进程对该信号的处理方式是默认或者捕捉，那么该进程就将该信号保持为未决
+（pending）状态，直到阻塞被解除，或者进程对该信号的动作改为忽略。</p>
+
+<p>如果进程对一个信号接触阻塞之前，该信号发生了多次，那么解除阻塞后，内核也只递送
+这个信号一次。</p>
+
+<p>每个进程都有一个“信号屏蔽字（signal mask），它规定了进程当前要阻塞的信号集。</p>
+
+<h3 id="kill和raise函数">kill和raise函数</h3>
+
+<p>kill发送信号给进程或进程组。
+raise允许进程发送一个信号给自己。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;signal.h&gt;
+int kill(pid_t pid, int signo);
+int raise(int signo);
+/* 成功时返回0，出错返回-1 */
+/* raise(signo) 等价于 kill(get_pid(), signo) */
+/*
+* 参数pid的4种不同情况：
+* pid &gt; 0     发送给pid进程
+* pid == 0    发送给同一进程组的所有进程
+* pid &lt; 0     发送给进程组ID等于pid绝对值的所有进程
+* pid == -1   发送给有权限发送的所有进程
+*/
+</code></pre></div></div>
+
+<h3 id="alarm和pause函数">alarm和pause函数</h3>
+
+<p>alarm函数用来设置一个定时器，定时器超时后会产生一个SIGALRM信号，对该信号的默认
+处理方式是终结进程。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;signal.h&gt;
+unsigned int alarm(unsigned int secondes);
+/* 返回值：0或者以前设置的闹钟时间的余留秒树 */
+</code></pre></div></div>
+
+<p>如果在调用alarm时，以前也设置过一个闹钟且该闹钟还没有超时，那么该闹钟的余留时间
+将作为这次alarm调用的返回值，以前登记的闹钟也会被新的闹钟所代替。</p>
+
+<p>pause函数使调用进程挂起，直到接收到一个信号。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;unistd.h&gt;
+int pause(void);
+/* 返回-1，并将errno设置为EINTR */
+</code></pre></div></div>
+
+<h3 id="信号集">信号集</h3>
+
+<p>数据类型<code class="highlighter-rouge">sigset_t</code>表示一个信集，有下面几个处理信号集的函数：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include&lt;signal.h&gt;
+int sigemptyset(sigset_t *set); /* 清空信号集 */
+int sigfillset(sigset_t *set);  /* 填满信号集，使其包含每一个可能的信号 */
+int sigaddset(sigset_t *set, int signo);
+int sigdelset(sigset_t *set, int signo);
+int sigismember(const sigset_t *set, int signo);
+</code></pre></div></div>
+
+<h3 id="sigprocmask和sigpending函数">sigprocmask和sigpending函数</h3>
+
+<p>进程有一个信号屏蔽字，它规定了当前阻塞哪些进程。调用<code class="highlighter-rouge">sigprocmask</code>函数可以检查和
+更改进程的信号屏蔽字：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;signal.h&gt;
+int sigprocmask(int how, const sigset_t *restrict set,
+                sitset_t *restrict oset);
+/*
+* 成功返回0， 出错返回-1
+* 如果 oset 是非空指针，则进程之前的信号屏蔽字由 oset 返回
+* 若干 set 是非空指针，则根据不同的 how 对进程的信号屏蔽字做设置：
+* how = SIG_BLOCK，之前的屏蔽字 + set代表的屏蔽字
+* how = SIG_UNBLOCK，之前的屏蔽字 - set代表的屏蔽字
+* how = SIG_SETMASK，用 set代表的屏蔽字 代替之前的屏蔽字
+*/
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">sigpending</code>函数返回进程对当前进程处于pending状态的信号集。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;signal.h&gt;
+int sigpending(sigset_t *set);
+</code></pre></div></div>
+
+<h3 id="sigaction函数">sigaction函数</h3>
+
+<p><code class="highlighter-rouge">sigaction</code>函数检查或修改与指定信号相关的处理动作。它比<code class="highlighter-rouge">signal</code>函数直观且更容易
+理解，事实上取代了老式的<code class="highlighter-rouge">signal</code>函数：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;signal.h&gt;
+int sigaction(int signo, const struct sigaction *restrict act,
+              struct sigaction *restrict oact);
+/* 成功返回0，错误返回-1 */
+</code></pre></div></div>
+
+<p>该函数使用一个名为<code class="highlighter-rouge">sigaction</code>的结构：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>struct siaction {
+    void (*sig_handler)(int); /* signal handler OR SIG_IGN, SIG_DFL */
+    sigset_t sa_mask;         /* 要阻塞的信号 */
+    int sa_flags;
+    void (*sa_sigaction)(int, siginfo_t *, void *); /* 替代的handler */
+};
+</code></pre></div></div>
+
+<p>参数说明：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">sig_handler</code>表示handler函数的地址。</li>
+  <li><code class="highlighter-rouge">sa_mask</code>说明了一个信号集，当调用handler时，会把这个信号集里面的信号都加到屏
+蔽字中，让它们都阻塞。</li>
+  <li><code class="highlighter-rouge">sa_flags</code>说明了一系列的参数。</li>
+  <li><code class="highlighter-rouge">sa_sigaction</code>是一个替代的handler，当<code class="highlighter-rouge">sa_flags</code>中出现了SA_SIGINFO时，就会调用
+这个函数，该函数使用了一个<code class="highlighter-rouge">siginfo_t</code>类型的参数，它包含了一些这次信号相关的信息
+。</li>
+</ul>
+
+<h3 id="sigsuspend函数">sigsuspend函数</h3>
+
+<p><code class="highlighter-rouge">sigsuspend</code>函数设置进程的信号屏蔽字，然后在捕捉到一个信号或者发生了一个会终止
+该进程的信号之前，该进程被挂起，而当接收到了信号且从信号处理程序返回时，进程的
+信号屏蔽字又会恢复为调用<code class="highlighter-rouge">sigsuspend</code>函数之前的值。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;signal.h&gt;
+int sigsuspend(const sigset_t *sigmask);
+/* 返回值：-1，并将errno设置为EINTR */
+</code></pre></div></div>
+
+<h3 id="abort函数">abort函数</h3>
+
+<p><code class="highlighter-rouge">abort</code>函数将SIGABRT信号发送给调用进程。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;stdlib.h&gt;
+void abort(void);
+</code></pre></div></div>
+
+<h3 id="sleep函数">sleep函数</h3>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;unistd.h&gt;
+unsigned int sleep(unsigned int seconds);
+/* 返回值：0或者未休眠够的秒数 */
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">sleep</code>函数使调用进程被挂起，直到下列条件之一被满足：</p>
+
+<ul>
+  <li>已经过了<code class="highlighter-rouge">seconds</code>指定的时间。</li>
+  <li>调用进程捕捉到一个信号并从信号处理程序返回。</li>
+</ul>
+
+<h2 id="信号在内核中的实现">信号在内核中的实现</h2>
+
+<p>对于信号，内核必须：</p>
+
+<ul>
+  <li>记住每个进程阻塞哪些信号。</li>
+  <li>当从内核态切换到用户态时，对任何一个进程都要检查是否有一个信号已经到达。这几
+乎在每个定时中断时都发生。</li>
+  <li>确定是否可以忽略信号。</li>
+  <li>处理信号。</li>
+</ul>
+
+<h3 id="与信号有关的数据结构">与信号有关的数据结构</h3>
+
+<p>对每个进程，内核必须跟踪什么信号当前正在挂起或被屏蔽，以及每个线程组是如何处理
+所有信号的。这些信息都记录在进程描述符<code class="highlighter-rouge">task_struct</code>中，如下图所示：</p>
+
+<p><img src="/assets/pictures/understanding_linux_step_by_step_signal_structures.png" alt="" /></p>
+
+<p>在进程描述符中，几个重要的字段是：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">struct signal_struct *signal</code> 是指向进程的信号描述符的指针，信号描述符用来
+跟踪共享的挂起信号。当使用设置了<code class="highlighter-rouge">CLONE_THREAD</code>位的clone()系统调用来fork新进程时
+，新的进程共享信号描述符。在<code class="highlighter-rouge">signal_struct</code>结构中有一个字段是
+<code class="highlighter-rouge">struct sigpending share_pending</code>，该字段中存放共享挂起信号的数据结构。</li>
+  <li><code class="highlighter-rouge">struct sighand_struct *sighand</code> 是进程的信号处理程序描述符的指针。</li>
+  <li><code class="highlighter-rouge">sigset_t blocked</code> 表示被阻塞的信号集。</li>
+  <li><code class="highlighter-rouge">struct sigpending pending</code> 存放私有挂起信号的数据结构。</li>
+</ul>
+
+<p>使用kill等系统调用，信号可以发送给整个线程组，也可以发送个特定的进程。所以，为
+了跟踪当前pending的信号是什么，内核让每个进程关联了两个pending信号队列：</p>
+
+<ul>
+  <li>共享pending信号队列。位于<code class="highlighter-rouge">task_struct</code>的<code class="highlighter-rouge">signal</code>的<code class="highlighter-rouge">share_pending</code>字段，它存放
+整个线程组的pending信号。</li>
+  <li>私有pending信号队列。位于<code class="highlighter-rouge">task_truct</code>的<code class="highlighter-rouge">pending</code>字段。</li>
+</ul>
+
+<p>这两个字段都是<code class="highlighter-rouge">sigpending</code>结构，该结构定义为：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>struct sigpending {
+    struct list_head list;
+    sigset_t signal;
+};
+</code></pre></div></div>
+
+<p>其中，list是一个<code class="highlighter-rouge">sigqueue</code>结构的双向链表头。该链表表示了具体的信号的信息。</p>
+
+<h3 id="产生信号">产生信号</h3>
+
+<p>很多内核函数都能产生信号，它们所做的工作事实上就是更新一个或多个的进程描述符，
+然后唤醒一些进程，促使它们接收信号。</p>
+
+<p>像一个进程发送信号的大致过程如下：</p>
+
+<ol>
+  <li>检查进程是否忽略信号。</li>
+  <li>检查私有pending信号队列上是否已经有另外一个相同的信号，有则什么都不做。</li>
+  <li>调用<code class="highlighter-rouge">send_signal</code>把信号添加到进程的pending信号集中。</li>
+  <li>通知进程有新的pending的信号，唤醒进程，如果进程已经在运行，则强制其重新调度
+。因为在从调度函数返回时，每个进程都检查是否存在挂起的信号。</li>
+</ol>
+
+<h3 id="传递和执行信号">传递和执行信号</h3>
+
+<p>内核从内核空间恢复到用户空间执行前，会检查是否存在pending的信号。也就是说当内核
+处理完一个中断或异常时就会做这样的检查。如果有pending的信号，则调用<code class="highlighter-rouge">do_signal</code>
+函数处理。该函数首先考虑私有pending信号队列中的所有信号，从最低编号开始，然后再
+考虑共享队列中的信号。</p>
+
+<p>如果信号有一个专门的处理程序，<code class="highlighter-rouge">do_signal</code>调用<code class="highlighter-rouge">handler_signal()</code>调用信号处理程序
+执行。</p>
+
+<p>需要注意的是，信号处理程序是定义在用户态中的函数，而信号处理是在返回用户态前，
+也就是在内核态中。另外，由于信号处理程序可以调用系统调用，这种情况下，执行了系
+统调用的服务例程之后，控制权应该返回到信号处理程序而不是返回到被中断程序的正常
+代码流。</p>
+
+<p>于是，<code class="highlighter-rouge">do_signal</code>函数中会调用<code class="highlighter-rouge">setup_frame()</code>对用户态堆栈进行设置，使（1）恢复用
+户态时首先执行的是信号处理程序，（2）信号处理程序结束时，通过<code class="highlighter-rouge">sigreturn</code>系统调
+用把用户态堆栈硬件上下文拷贝到内核态堆栈，同时恢复用户态堆栈原始的状态。这时再
+从内核态恢复到用户态时，就能执行“正常”的程序流程。</p>
+
+<p>捕获一个信号的示意图如下：</p>
+
+<p><img src="img/signal.png" alt="" /></p>
+
+<hr />
+
+<p>参考资料：</p>
+
+<ul>
+  <li>Man pages</li>
+  <li><a href="http://book.douban.com/subject/1788421/">UNIX环境高级编程</a></li>
+  <li><a href="http://book.douban.com/subject/6097773/">Linux内核设计与实现</a></li>
+</ul>
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

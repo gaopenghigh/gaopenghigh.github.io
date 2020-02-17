@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Linux 中文件的基本概念</title>
+  <meta name="description" content="Linux 中文件的基本概念">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tech/2013/04/27/linux_file.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Linux 中文件的基本概念</h1>
+    <p class="post-meta"><time datetime="2013-04-27T10:00:00+08:00" itemprop="datePublished">Apr 27, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="linux-中文件的基本概念">Linux 中文件的基本概念</h1>
+
+<h2 id="文件描述符">文件描述符</h2>
+
+<p>Linux把一切都看做文件，设备、管道、socket都可以看做文件，可以通过一个文件描述符来引用，对它们可以调用read()和write()等系统调用。文件描述符一般是一个正非负整数，一般情况下，文件描述符0，1，2分别代表标准输入、标准输出和标准出错。</p>
+
+<p>在进程描述符<code class="highlighter-rouge">task_struct</code>中有一个元素files，这就是指向这个进程打开的文件描述符表。</p>
+
+<h2 id="虚拟文件系统概念">虚拟文件系统概念</h2>
+
+<p>我们知道文件系统有很多种，Linux下的ext2, ext3, ext4, windows下的NTFS, 以及网络文件系统NFS等等，要把这么多文件系统，加上一些设备统统视作文件，能用统一的方法控制，Linux使用了所谓“虚拟文件系统”VFS。VFS有自己的一套概念，不管具体的文件系统是什么，要在Linux下能工作，就必须用VFS的框框来套。比如说，我们知道VFS中有inode的概念，某个文件系统使用数据库的方式来存取数据，那么为了在Linux下能够工作，就必须在驱动程序中就必须把数据信息转化为inode的方式。VFS相当于一套接口和规范，具体实现各个文件系统自己搞自己的，但表现出来的样子必须一样。</p>
+
+<p>VFS采用的是面向对象的设计思路，但由于使用C来实现，所以这些面向对象的特性通过结构体来实现。</p>
+
+<p>VFS有四种主要的对象类型：</p>
+
+<ul>
+  <li>
+    <p>索引节点对象(<code class="highlighter-rouge">struct inode</code>)</p>
+
+    <p>Linux把文件的相关信息和文件本身这两个概念加以区分，前者包括文件类型，修改时间、所有者、大小、是否为脏等信息，这些信息与具体数据分开，放在单独的数据结构inode中，这个对象叫做索引节点对象。一个inode代表文件系统中的一个文件，但仅当文件被访问时，inode对象才会在内存中创建。</p>
+  </li>
+  <li>
+    <p>超级块对象(<code class="highlighter-rouge">struct super_block</code>)</p>
+
+    <p>每个文件系统都有自己的信息，包括它的文件格式，内核所能调用的方法等，这些信息存储在所谓的超级块对象中。</p>
+  </li>
+  <li>
+    <p>文件对象(<code class="highlighter-rouge">struct file</code>)</p>
+
+    <p>它代表进程打开的文件，也就是进程直接处理的东西。所以文件对象包含访问模式、当前偏移量等进程操作中进程使用的信息。同一个文件可能由多个进程打开，所以同一个文件可能在内存中存在对个对应的文件对象。由于同一文件的不同文件对象的当前偏移量不同，所以两个进程同时操作一个文件，可能会发生不可预知的结果。
+  文件对象通过 <code class="highlighter-rouge">f_dentry</code> 指针指向相关的目录项对象，目录项对象又会指向相关的索引节点。</p>
+  </li>
+  <li>
+    <p>目录项对象(<code class="highlighter-rouge">struct dentry</code>)</p>
+
+    <p>VFS把目录当做文件对待。随意在路径/bin/vi中，bin和vi都属于文件，虽然它们都可以统一由inode表示，但是为了查找方便，VFS引入了目录项（dentry）的概念。每个dentry代表路径中的一个部分。</p>
+
+    <p>目录项对象没有对应的磁盘数据结构，VFS更具字符串形式的路径名现场创建它。</p>
+
+    <p>目录项对象有三种有效状态：被使用、未被使用和负状态。</p>
+
+    <p>一个目录项处于被使用状态表明它对应一个有效的inode，同时存在一个或多个使用者（dentry结构中的<code class="highlighter-rouge">d_count&gt;0</code>）。它正在被VFS使用，不能被丢弃。</p>
+
+    <p>一个目录项处于未被使用状态，表示它指向一个有效的inode，但是当前VFS并没有使用这个inode代表的文件（<code class="highlighter-rouge">d_count=0</code>）。</p>
+
+    <p>负状态的目录项没有对应的有效inode，因为inode已经被删除了或者路径不正确。
+  因为遍历路径中的所有元素并将它们逐个解析成目录项对象，是比较耗费资源的工作，所以内核将目录项对象缓存在目录项缓存dcache中。</p>
+  </li>
+</ul>
+
+<p>每个主要对象中都包含一个操作对象，该操作对象描述了内核针对主要对象可以使用的所有方法。比如索引节点对象中包含<code class="highlighter-rouge">inode_operations</code>对象，里面又包括了内核针对特定文件所能调用的方法，比如create()和link()等方法。这些方法需要由各个文件系统的驱动做具体的实现。</p>
+
+<h2 id="文件类型">文件类型</h2>
+
+<p>文件类型包含下面几种：</p>
+
+<ul>
+  <li>普通文件（regular file）。最常用的的文件类型，内容可能是文本或者二进制格式。</li>
+  <li>目录文件（directory file）。文件中包含了其它文件的名字以及指向它们信息的指针。</li>
+  <li>块特殊文件（block special file）。提供对设备（例如磁盘）的带缓冲的访问，每次访问以固定长度为单位进行。</li>
+  <li>字符特殊文件（character special file）。提供对设备不带缓冲的访问，每次访问长度可变。系统中的设备要么是字符特殊文件，要么是块特殊文件。</li>
+  <li>FIFO。即命名管道，用于进程间通信。</li>
+  <li>套接字（socket）。用于网络通信或进程间的通信。</li>
+  <li>符号链接（symbolic link）。指向另一个文件的文件。</li>
+</ul>
+
+<h2 id="硬链接和符号链接hard-link--symbolic-link">硬链接和符号链接（hard link &amp; symbolic link）</h2>
+
+<p>简单地说，硬链接和原文件中的inode编号是同一个，也就是共享同一个inode。如图：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    ! filename ! inode # !
+    +--------------------+
+                    \
+                     &gt;--------------&gt; ! permbits, etc ! addresses !
+                    /                 +---------inode-------------+
+    ! othername ! inode # !
+    +---------------------+
+</code></pre></div></div>
+
+<p>符号链接的则是指向了另外的文件，也就是说符号链接的文件内容就是另外一个文件的路径，如图：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    ! filename ! inode # !
+    +--------------------+
+                    \
+                     .-------&gt; ! permbits, etc ! addresses !
+                               +---------inode-------------+
+                                                  /
+                                                 /
+                                                /
+.----------------------------------------------'
+(
+'--&gt;  !"/path/to/some/other/file"!
+      +---------data-------------+
+              /                      }
+.~ ~ ~ ~ ~ ~ ~                       }-- (redirected at open() time)
+(                                     }
+'~~&gt; ! filename ! inode # !
+     +--------------------+
+                     \
+                      '------------&gt; ! permbits, etc ! addresses !
+                                     +---------inode-------------+
+                                                        /
+                                                       /
+ .----------------------------------------------------'
+(
+ '-&gt;  ! data !  ! data ! etc.
+      +------+  +------+
+</code></pre></div></div>
+
+<h3 id="文件的删除">文件的删除</h3>
+
+<p>文件真正被删除的条件：</p>
+
+<ul>
+  <li>链接计数达到0.
+  比如file2是指向file1的硬链接，那么执行<code class="highlighter-rouge">rm file1</code>后，通过file2还能访问到文件的内容。</li>
+  <li>只要有进程打开了该文件，则其内容也不能被删除。</li>
+</ul>
+
+<p>在Linux中，删除目录项的操作是通过<code class="highlighter-rouge">unlink()</code>函数执行的：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;unistd.h&gt;
+int unlink(const char *pathname);
+</code></pre></div></div>
+
+<p>此函数删除目录项，并将由pathname所引用的文件的链接数减1。</p>
+
+<h3 id="临时文件">临时文件</h3>
+
+<p>程序运行过程中进程需要打开一些临时文件，但是当程序终止崩溃时，我们不希望这些临时文件遗留下来。于是我们通吃create或open创建临时文件，去掉它的文件描述符，然后马上调用unlink，此时这个临时文件的连接数为0，但是仍然有进程打开了它，所以它能够被访问。当进程消失时，这个文件的内容也就随之被删除了。</p>
+
+<p>另外还有一个remove函数，对于文件，该函数的功能与unlink相同，对于目录，其功能与rmdir相同。</p>
+
+<h2 id="stat结构体">stat结构体</h2>
+
+<p>为了更深入地理解文件，我们看一下记录文件信息的数据结构。文件的信息存放在stat结构体中。该结构定义如下（具体的实现可能有所不同）：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>struct stat {
+    dev_t     st_dev;     /* ID of device containing file */
+    ino_t     st_ino;     /* inode number */
+    mode_t    st_mode;    /* file mode &amp; permission */
+    nlink_t   st_nlink;   /* number of hard links */
+    uid_t     st_uid;     /* user ID of owner */
+    gid_t     st_gid;     /* group ID of owner */
+    dev_t     st_rdev;    /* device ID (if special file) */
+    off_t     st_size;    /* total size, in bytes */
+    blksize_t st_blksize; /* blocksize for file system I/O */
+    blkcnt_t  st_blocks;  /* number of 512B blocks allocated */
+    time_t    st_atime;   /* time of last access */
+    time_t    st_mtime;   /* time of last modification */
+    time_t    st_ctime;   /* time of last status change */
+};
+</code></pre></div></div>
+
+<p>上一小节说的文件类型就存放在<code class="highlighter-rouge">st_mode</code>字段中。</p>
+
+<p><code class="highlighter-rouge">st_size</code>字段表示文件的长度，这个字段只对普通文件、目录文件和链接文件有意义。</p>
+
+<ul>
+  <li>对于目录，其长度通常是一个整数的倍数。</li>
+  <li>
+    <p>对于链接文件，其长度是它指向的文件的文件名的实际字节数，比如：</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  lrwxrwxrwx  1 j j   15 Apr 29 17:19 link -&gt; /home/j/Public/
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<h2 id="ext2文件系统简介">Ext2文件系统简介</h2>
+
+<p>Ext2文件系统在格式化时，分为多个区块群组（block group），每个区块群组都有独立的inode/block/superblock。</p>
+
+<p><img src="img/linux_file_ext2.png" alt="ext2" /></p>
+
+<p>上图中，区块对应表记录了哪些block被使用了哪些没有。同样inode对应表记录了哪些inode被使用了。</p>
+
+<p>每个block的大小在格式化时可以设置，一般为1K-4K。</p>
+
+<p>inode的大小有限，那么如果一个文件很大时，怎么才能列出所有记录了该文件内容的block呢？Ext2中用了3层的间接记录区来实现这个功能。第一层间接纪录区记录了一个block，该block的内容不是文件的实际内容，二是更多的block的地址，这些block中存放的才是文件的实际内容。第二层间接纪录区记录了一个block，该block又记录了一堆的block，而这堆block们各自有记录了一堆的block，这些block中才是记录了文件内容。第三层间接纪录区的意义以此类推。下面的图来自于《鸟哥的Linux私房菜》：</p>
+
+<p><img src="img/linux_file_ext2_block.png" alt="ext2" /></p>
+
+<p>关于ext2文件系统，可以参考鸟哥的<a href="http://linux.vbird.org/linux_basic/0230filesystem.php">《Linux磁碟與檔案系統管理》</a></p>
+
+<p>JH, 2013-04-27</p>
+
+<hr />
+
+<p>参考资料</p>
+
+<ul>
+  <li><a href="http://linuxgazette.net/105/pitcher.html">Q &amp; A: The difference between hard and soft links</a></li>
+  <li><a href="http://linux.vbird.org/linux_basic/0230filesystem.php">《Linux磁碟與檔案系統管理》</a></li>
+</ul>
+
+<hr />
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

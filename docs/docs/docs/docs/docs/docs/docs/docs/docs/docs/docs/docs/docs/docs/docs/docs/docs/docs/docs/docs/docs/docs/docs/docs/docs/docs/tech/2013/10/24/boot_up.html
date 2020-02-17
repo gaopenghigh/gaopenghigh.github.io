@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>计算机的启动</title>
+  <meta name="description" content="计算机的启动">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/10/24/boot_up.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">计算机的启动</h1>
+    <p class="post-meta"><time datetime="2013-10-24T10:00:00+08:00" itemprop="datePublished">Oct 24, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="计算机的启动">计算机的启动</h1>
+
+<p>本文是对 Gustavo Duarte 两篇文章的笔记:</p>
+<ul>
+  <li><a href="http://duartes.org/gustavo/blog/post/how-computers-boot-up">How Computers Boot Up</a></li>
+  <li><a href="http://duartes.org/gustavo/blog/post/kernel-boot-process">The Kernel Boot Process</a></li>
+</ul>
+
+<p><strong>目标:</strong> 了解从按下电源按钮开始到内核开始正常工作的主要过程</p>
+
+<p><strong>关键字：</strong> 启动，Linux，boot loader</p>
+
+<h2 id="第一部分内核之前的故事">第一部分：内核之前的故事</h2>
+
+<p>说明： 以下步骤忽略了很多细节。</p>
+
+<p>主板初始化，确保上面的芯片能正常运行。</p>
+
+<p>CPU开始运行，对于多核的CPU，会选择其中的一个作为 bootstrap processor(BSP)
+来运行。此时CPU处于所谓的 real mode ，不能对内存进行分页管理，一共只有1M内
+存可用。</p>
+
+<p>CPU的大多数寄存器都是实现定义好的，包括执行当前要运行的指令在内存中的地址，
+即 instruction pointer(EIP)。主板确保这个指令的工作就是 jump 到BIOS的入口的
+那条指令。</p>
+
+<p>CPU开始执行BIOS的指令，这些指令固定在内存的第640K-1M的区间内。</p>
+
+<p>BIOS程序会对机器的硬件做一些初始化，然后做一下 Power-on Self Test(POST)，对
+各个组件进行测试。</p>
+
+<p>BIOS试图按照用户设置好的顺序从某种介质启动操作系统，可能是磁盘、光驱或者网
+络等等，我们假设从磁盘启动。</p>
+
+<p>BIOS读取磁盘最开始的512字节的数据，这部分数据叫做
+<a href="http://en.wikipedia.org/wiki/Boot_sector">boot sector</a> 或者 boot block，
+即引导扇区。Boot sector一般包含一段程序，这样启动程序就能能够从同一个设备上加载
+头512字节的内容，把这部分内容放到物理内存的0x7c00的位置，然后执行它，从而引导
+操作系统或者做其它事情。</p>
+
+<p>对于已经分区的设备，其boot sector又叫做 Master Boot Record(MBR)。
+MBR包含两部分，一开始是和OS相关的启动程序，后面接着的是磁盘的分区表。但事
+实上BIOS并不关心MBR具体的构成，它只是简单地把MBR读取到内存的 0x7c00 地址处
+，然后跳到此处开始执行，即所谓的 boot loader.</p>
+
+<p>Boot loader包含两部分，第一部分就是在MBR中的代码，叫做 Stage 1.</p>
+
+<p>由于MBR很小，它所做的事情就是从硬盘中再读入另外一段程序，然后执行它。</p>
+
+<p>读入的程序就是 Boot loader 的第二部分，在GRUB中就叫做 “GRUB Stage 2” ，对于
+Windows就是 NTLDR ，这部分代码从磁盘主读取启动配置文件（比如grub.conf或者
+boot.ini），根据配置进行启动。</p>
+
+<p>Boot Loader根据启动配置文件，使用BOIS的硬盘IO服务从磁盘中读取内核镜像文件到
+内存，跳到这部分代码并开始执行，至此内核开始启动。需要注意的是，此时CPU仍然
+是运行在 real mode中的，只用用头1M内存，并且第640K-1M的部分已经被BIOS用了，
+于是只剩640K可用。内核镜像一般都大于640K，于是 boot loader 使用了一些技术，
+使其能够访问1M以上的内存。</p>
+
+<h2 id="第二部分内核的启动">第二部分：内核的启动</h2>
+
+<p>第一部分结束后，现在CPU还处于 real-mode ，只能处理1M以内的内存，供内核使用
+的更是只有640K，而内核镜像一般都比1M大。于是，内核镜像被分做两部分分别加载
+到内存中：第一部分较小，包含了 real-mode 的内核代码，这部分加载到640K以下的
+位置，剩下的部分是 protect-mode 的代码，加载到从1M开始的位置，如下图所示：
+<img src="/assets/pictures/memoryAfterBootloader.png" alt="" /></p>
+
+<p>0-640K的内存区域中，boot loader会读取一些信息，包括可读的内核版本的字符串，以及
+real-mode 内核部分的位置等。另外boot loader也会写一些东西到这部分内存，比如用户
+在boot loader菜单中输入的命令参数等。当boot loader程序结束时，它会填充所有内核
+需要的参数，然后jump到内核的入口。</p>
+
+<p>内核镜像 real-mode 部分的头512字节，事实上就是一个boot sector（引导扇区），在没
+有boot loader的时代，这部分代码就负责对Linux的引导。现在，这部分代码仅仅打印一
+行信息。</p>
+
+<p>在头512字节后，偏移量为0x200的位置，即是 real-mode 内核的入口，也就是前面所说
+的boot loader需要jump到的位置。接下来会执行一段程序，为 real-mode 的内核设置一
+个栈(Stack)，把BSS设置为0。以上的代码都是汇编，这部分完成后，就会jump到位于
+arch/X86/boot/main.c的C程序。</p>
+
+<p>main.c主要做一些初始化设置，还检测一下内存、设置一下video等，然后调用
+<code class="highlighter-rouge">go_to_protected_mode()</code>，进入 protected mode。real-mode 和 protected mode之间
+有两个最主要的区别：中断和内存。在real-mode，中断描述符表总是在地址0处，而在
+protected mode，中断向量表的位置储存在IDTR寄存器中。另外，protected mode 需要
+对逻辑地址进行和物理地址进行转换，需要一个GDTR的寄存器来存储
+<a href="http://en.wikipedia.org/wiki/Global_descriptor_table">Global Descriptor Table</a>
+。real-mode到protected mode的这些转换工作都是在<code class="highlighter-rouge">go_to_protected_mode()</code>中完成
+的。</p>
+
+<p>对protected mode的进入是通过一段名叫<code class="highlighter-rouge">protected_mode_jump</code>的汇编完成的，具体是通
+过设置CPU的CR0寄存器的PE位。对于32位系统，现在已经可以使用4G的内存了。接下来就
+是一些寄存器的初始化，然后对压缩的内核进行解压。</p>
+
+<p>内核解压完成后就会覆盖之前压缩的内容，于是它也是从内存的1M位置处开始。解压完成
+后，就jump到protected mode的接入点，开始执行内核代码。</p>
+
+<p>内核通过汇编对protected mode 的BSS进行初始化，设置最终的GDTR的值，创建页表（
+page tables）使得分页机制能被启动，初始化一个Stack，创建最终的中断描述符表，最
+后jump到<code class="highlighter-rouge">start_kernel()</code>的C代码。</p>
+
+<p><code class="highlighter-rouge">start_kernel()</code>主要就是对一系列内核子系统和数据结构的初始化，接下来调用
+<code class="highlighter-rouge">rest_init()</code>。</p>
+
+<p><code class="highlighter-rouge">rest_init()</code>启动一个内核线程运行<code class="highlighter-rouge">kernel_init()</code>，然后调用<code class="highlighter-rouge">schedule()</code>开始启动
+进程调度，然后调用<code class="highlighter-rouge">cpu_idle()</code>，<code class="highlighter-rouge">cpu_idle()</code>是使CPU保持idle状态的线程，它一直循
+环直到有其它工作要做。</p>
+
+<p>在这之前，所有代码都只使用了一个CPU，而<code class="highlighter-rouge">kernel_init()</code>就负责对剩下的CPU进行初始
+化，最后调用<code class="highlighter-rouge">init_post</code>，在用户空间启动一个进程，即PID为1的init进程。init进程
+再根据配置启动一系列的程序。</p>
+
+<p>到此，系统启动完毕。</p>
+
+<hr />
+
+<p>参考资料：</p>
+
+<ul>
+  <li><a href="http://duartes.org/gustavo/blog/post/how-computers-boot-up">How Computers Boot Up</a></li>
+  <li><a href="http://duartes.org/gustavo/blog/post/kernel-boot-process">The Kernel Boot Process</a></li>
+</ul>
+
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

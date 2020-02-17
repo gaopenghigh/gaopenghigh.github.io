@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Linux 中的管道和 FIFO</title>
+  <meta name="description" content="Linux 中的管道和 FIFO">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tech/2013/10/24/pipe_and_fifo.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Linux 中的管道和 FIFO</h1>
+    <p class="post-meta"><time datetime="2013-10-24T10:00:00+08:00" itemprop="datePublished">Oct 24, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="linux-中的管道和-fifo">Linux 中的管道和 FIFO</h1>
+
+<p>进程间通信叫做IPC：InerProcess Communication</p>
+
+<p>Unix系统的进程间通信主要有下面几种机制：</p>
+
+<ul>
+  <li>管道和FIFO</li>
+  <li>信号量</li>
+  <li>消息（Linux内核提供“System V IPC消息”和“POSIX消息队列”）</li>
+  <li>共享内存区</li>
+  <li>套接字</li>
+</ul>
+
+<p>本文讨论管道和FIFO，以及它们在Linux内核中的实现方式。</p>
+
+<h2 id="管道和fifo">管道和FIFO</h2>
+
+<p>管道和FIFO最适合在进程之间实现生产者/消费者的交互。</p>
+
+<h3 id="shell中的管道">Shell中的管道</h3>
+
+<p>让我们考察一个Shell命令<code class="highlighter-rouge">ls | more</code>执行时到底发生了哪些事：</p>
+
+<ol>
+  <li>调用<code class="highlighter-rouge">pipe()</code>系统调用，产生了两个文件描述符3（读）和4（写）。</li>
+  <li>两次<code class="highlighter-rouge">fork()</code>系统调用。
+    <ul>
+      <li>第一次<code class="highlighter-rouge">fork()</code>，需要执行<code class="highlighter-rouge">more</code>命令：
+        <ul>
+          <li>调用<code class="highlighter-rouge">dup2(3, 0)</code>把文件描述符3拷贝到标准输入0.</li>
+          <li>两次调用<code class="highlighter-rouge">close()</code>系统调用关闭文件描述符3和4.</li>
+          <li>调用<code class="highlighter-rouge">execve()</code>系统调用执行<code class="highlighter-rouge">more</code>程序，从标准输入（之前已经被接到了管
+道）读入输入，输出到标准输出。</li>
+        </ul>
+      </li>
+      <li>第二次<code class="highlighter-rouge">fork()</code>，需要执行<code class="highlighter-rouge">ls</code>命令：
+        <ul>
+          <li>调用<code class="highlighter-rouge">dup2(4, 1)</code>把文件描述符4拷贝到标准输入1.</li>
+          <li>两次调用<code class="highlighter-rouge">close()</code>系统调用关闭文件描述符3和4.</li>
+          <li>调用<code class="highlighter-rouge">execve()</code>系统调用执行<code class="highlighter-rouge">ls</code>程序，输出到标准输出（之前已经被接到了
+管道）。</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ol>
+
+<h3 id="pipe">pipe()</h3>
+
+<p>半双工的管道是最常见的IPC形式。管道通过<code class="highlighter-rouge">pipe()</code>函数创建：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;unistd.h&gt;
+int pipe(int filedes[2]);
+/* 成功返回0，失败返回-1 */
+</code></pre></div></div>
+
+<p>参数<code class="highlighter-rouge">filedes</code>是int型的长度为2的数组，经过<code class="highlighter-rouge">pipe()</code>函数调用后:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">filedes[0]</code>可读</li>
+  <li><code class="highlighter-rouge">filedes[1]</code>可写</li>
+  <li><code class="highlighter-rouge">filedes[0]</code>的输入是<code class="highlighter-rouge">filedes[1]</code>的输出</li>
+</ul>
+
+<p>父进程和子进程通过管道通信的例子是：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;unistd.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+#define MAXLINE 100
+
+void err(char *s) {
+    printf("%s\n", s);
+    exit(1);
+}
+
+void test_pipe() {
+    int n;
+    int fd[2];
+    int pid;
+    char line[MAXLINE];
+
+    if (pipe(fd) &lt; 0)
+        err("pipe failed");
+    if ((pid = fork()) &lt; 0) {
+        err("fork failed");
+    } else if (pid == 0) {        /* parent */
+        close(fd[0]);             /* close read side of PIPE */
+        write(fd[1], "hello son\n", 10);
+    } else {                      /* child */
+        close(fd[1]);             /* close write side of PIPE */
+        n = read(fd[0], line, MAXLINE);
+        write(STDOUT_FILENO, line, n);
+    }
+    exit(0);
+}
+</code></pre></div></div>
+
+<p>在APUE中用管道实现了父子进程之间的通信函数TELL_WAIT，实现如下：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* tell_wait_pipe.c
+ * Use PIPE to sync between child process and parent process
+ * From APUE
+ * Create 2 PIPEs, fd1[2], fd2[2]
+ * fd1 : parent --&gt; child, write 'p' if parent is OK
+ * fd2 : child --&gt; parent, write 'c' if child is OK
+ */
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;unistd.h&gt;
+
+#define ERRORCODE 1
+
+static int fd1[2], fd2[2];
+
+void err(char *s) {
+    printf("ERROR: %s\n", s);
+    exit(ERRORCODE);
+}
+
+void TELL_WAIT(void) {
+    if (pipe(fd1) &lt; 0 || pipe(fd2) &lt; 0)
+        err("pipe failed");
+}
+
+void TELL_PARENT(pid_t pid) {
+    if (write(fd2[1], "c", 1) != 1)
+        err("write error");
+}
+
+void WAIT_PARENT(pid_t pid) {
+    char c;
+    if (read(fd1[0], &amp;c, 1) != 1)
+        err("read error");
+    if (c != 'p')
+        err("WAIT_PARENT: incorrect data");
+}
+
+void TELL_CHILD(pid_t pid) {
+    if (write(fd1[1], "p", 1) != 1)
+        err("write error");
+}
+
+void WAIT_CHILD(pid_t pid) {
+    char c;
+    if (read(fd2[0], &amp;c, 1) != 1)
+        err("read error");
+    if (c != 'c')
+        err("WAIT_CHILD: incorrect data");
+}
+</code></pre></div></div>
+
+<h3 id="popen和pclose"><code class="highlighter-rouge">popen()</code>和<code class="highlighter-rouge">pclose()</code></h3>
+
+<p><code class="highlighter-rouge">popen()</code>函数创建一个管道，然后调用fork产生一个子进程，关闭管道的不使用端，执行
+一个shell以运行命令，然后等待命令终止。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;stdio.h&gt;
+FILE *popen(const char *cmdstring, const char *type);
+/* type 可以是"r"或者"w" */
+/* 成功返回文件指针，出错返回NULL */
+int pclose(FILE *fp);
+/* 返回cmdstring的终止状态，出错返回-1 */
+</code></pre></div></div>
+
+<h2 id="fifo">FIFO</h2>
+
+<p>FIFO又叫做命名管道。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;sys.stat.h&gt;
+int mkfifo(const char *pathname, mode_t mode);
+/* mode的值和open()函数一样，常用O_RDONLY, O_WRONLY, O_RDWR三者之一 */
+/* 返回值：成功返回0，出错返回-1 */
+</code></pre></div></div>
+
+<p>通过prog1产生的一份数据，要分别经过prog2和prog3的处理，使用FIFO可以这样做：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mkfifo fifo1
+prog3 &lt; fifo1 &amp;
+prog1 &lt; infile | tee fifo1 | prog2
+</code></pre></div></div>
+
+<p>FIFO的一个重要应用是在客户进程和服务器进程间传递数据。</p>
+
+<h2 id="管道的内核实现">管道的内核实现</h2>
+
+<h3 id="管道数据结构">管道数据结构</h3>
+
+<p>管道被创建时，进程就可以使用两个VFS系统调用–（即<code class="highlighter-rouge">read()</code>和<code class="highlighter-rouge">write()</code>来访问管道
+。所以，对于每个管道，内核都要创建一个索引节点和两个文件对象，一个文件对象用于
+读。</p>
+
+<p>在索引节点结构<code class="highlighter-rouge">struct inode</code>中，有一个表示索引节点类型的union：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>union {
+    struct pipe_inode_info  *i_pipe;
+    struct block_device *i_bdev;
+    struct cdev     *i_cdev;
+};
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">i_pipe</code>字段就指向一个代表管道的结构体<code class="highlighter-rouge">struct pipe_inode_info</code>:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/**
+ *	struct pipe_buffer - a linux kernel pipe buffer
+ *	@page: the page containing the data for the pipe buffer
+ *	@offset: offset of data inside the @page
+ *	@len: length of data inside the @page
+ *	@ops: operations associated with this buffer. See @pipe_buf_operations.
+ *	@flags: pipe buffer flags. See above.
+ *	@private: private data owned by the ops.
+ **/
+struct pipe_buffer {
+	struct page *page;
+	unsigned int offset, len;
+	const struct pipe_buf_operations *ops;
+	unsigned int flags;
+	unsigned long private;
+};
+
+/**
+ *	struct pipe_inode_info - a linux kernel pipe
+ *	@wait: reader/writer wait point in case of empty/full pipe
+ *	@nrbufs: the number of non-empty pipe buffers in this pipe
+ *	@buffers: total number of buffers (should be a power of 2)
+ *	@curbuf: the current pipe buffer entry
+ *	@tmp_page: cached released page
+ *	@readers: number of current readers of this pipe
+ *	@writers: number of current writers of this pipe
+ *	@waiting_writers: number of writers blocked waiting for room
+ *	@r_counter: reader counter
+ *	@w_counter: writer counter
+ *	@fasync_readers: reader side fasync
+ *	@fasync_writers: writer side fasync
+ *	@inode: inode this pipe is attached to
+ *	@bufs: the circular array of pipe buffers
+ **/
+struct pipe_inode_info {
+	wait_queue_head_t wait;
+	unsigned int nrbufs, curbuf, buffers;
+	unsigned int readers;
+	unsigned int writers;
+	unsigned int waiting_writers;
+	unsigned int r_counter;
+	unsigned int w_counter;
+	struct page *tmp_page;
+	struct fasync_struct *fasync_readers;
+	struct fasync_struct *fasync_writers;
+	struct inode *inode;
+	struct pipe_buffer *bufs;
+};
+</code></pre></div></div>
+
+<p>每个管道都有自己的管道缓冲区（pipe buffer），事实上，每个管道都有一个管道缓冲区
+的数组，即<code class="highlighter-rouge">bufs</code>字段表示的数组，这个数组可以看作一个环形缓冲区：写进程不断向这
+个大缓冲区追加数据，而读进程则不断移出数据。当前使用的那个缓冲区就是<code class="highlighter-rouge">curbuf</code>。</p>
+
+<p>每个管道缓冲区由<code class="highlighter-rouge">struct pipe_buffer</code>表示，结构体中指明了缓冲区页框的描述符地址
+，页框内有效数据的offset以及数据的长度，<code class="highlighter-rouge">ops</code>字段表示的是操作管道缓冲区的方法表
+的地址。</p>
+
+<h3 id="管道的创建和撤销">管道的创建和撤销</h3>
+
+<h4 id="创建">创建</h4>
+
+<p><code class="highlighter-rouge">pipe()</code>系统调用由<code class="highlighter-rouge">sys_pipe()</code>函数处理，后者又会调用<code class="highlighter-rouge">do_pipe()</code>函数。该函数的主
+要操作如下：</p>
+
+<ol>
+  <li>创建一个索引节点对象并初始化。</li>
+  <li>分配可读的文件对象和文件描述符，该文件对象的<code class="highlighter-rouge">f_op</code>字段初始化成
+<code class="highlighter-rouge">read_pipe_fops</code>表的地址。</li>
+  <li>分配可写的文件对象和文件描述符，该文件对象的<code class="highlighter-rouge">f_op</code>字段初始化成
+<code class="highlighter-rouge">write_pipe_fops</code>表的地址。</li>
+  <li>分配一个目录项对象，并使用它把两个文件对象和索引节点连接在一起。然后把新的索
+引节点插入pipefs图书文件系统中。</li>
+  <li>把两个文件描述符返回给用户态进程。</li>
+</ol>
+
+<h4 id="撤销">撤销</h4>
+
+<p>只要进程对与管道相关的一个文件描述符调用<code class="highlighter-rouge">close()</code>系统调用，内核就对相应的文件对
+象执行<code class="highlighter-rouge">fput()</code>函数，这会减少它的引用计数器的值。如果这个计数器变成0，那么该函数
+就会调用这个文件操作的<code class="highlighter-rouge">release</code>方法。<code class="highlighter-rouge">realeas</code>方法根据文件是与读通道还是写通道
+关联，对这个管道相关的资源进行释放。</p>
+
+<h3 id="管道的读取和写入">管道的读取和写入</h3>
+
+<h4 id="从管道中读取">从管道中读取</h4>
+
+<p>希望从管道中读取数据的进程发出一个<code class="highlighter-rouge">read()</code>系统调用，内核最终调用与这个文件描述
+符相关的文件操作表中所找到的read方法，对于管道，read方法在<code class="highlighter-rouge">read_pipe_fops</code>表中
+指向<code class="highlighter-rouge">pipe_read()</code>函数。</p>
+
+<p>当出现下面的情况时，读操作会阻塞：</p>
+
+<ul>
+  <li>系统调用开始时管道缓冲区为空。</li>
+  <li>管道缓冲区没有包含所有请求的字节，写进程在等待缓冲区的空间时曾被置为睡眠。</li>
+</ul>
+
+<p>当然，通过<code class="highlighter-rouge">fcntl()</code>系统调用也可以把对管道的读操作设置为非阻塞的。</p>
+
+<h4 id="向管道中写入">向管道中写入</h4>
+
+<p>希望向管道中写入数据的进程发出一个<code class="highlighter-rouge">write()</code>系统调用，和读取类似，内核最终会调用
+<code class="highlighter-rouge">pipe_write()</code>函数。</p>
+
+<p>需要注意的是，如果有两个或者多个进程并发地在写入一个管道，那么任何少于一个管道
+缓冲区大小的写操作都必须单独（原子地）完成，而不能与其它进程交叉进行。</p>
+
+<h3 id="fifo-1">FIFO</h3>
+
+<p>在Linux中，FIFO和管道几乎是相同的，除了：</p>
+
+<ul>
+  <li>FIFO索引节点出现在系统目录树上而不是pipefs特殊文件系统中。</li>
+  <li>FIFO是一种双向通信管道；也就是说，可以以读/写模式打开一个FIFO。</li>
+</ul>
+
+<p>打开一个FIFO时，VFS首先判断到这个文件是特殊的FIFO类型文件，然后找到针对这种文件
+的操作函数表，在使用表中对应的函数对FIFO进行操作。</p>
+
+<hr />
+
+<p>参考资料：</p>
+
+<ul>
+  <li>Man pages</li>
+  <li><a href="http://book.douban.com/subject/1788421/">UNIX环境高级编程</a></li>
+  <li><a href="http://book.douban.com/subject/6097773/">Linux内核设计与实现</a></li>
+</ul>
+
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

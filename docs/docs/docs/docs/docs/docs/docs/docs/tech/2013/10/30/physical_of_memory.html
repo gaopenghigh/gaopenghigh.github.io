@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>内存相关的硬件基础知识</title>
+  <meta name="description" content="内存相关的硬件基础知识">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tech/2013/10/30/physical_of_memory.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">内存相关的硬件基础知识</h1>
+    <p class="post-meta"><time datetime="2013-10-30T10:00:00+08:00" itemprop="datePublished">Oct 30, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="内存相关的硬件基础知识">内存相关的硬件基础知识</h1>
+
+<h3 id="主板上的芯片们">主板上的芯片们</h3>
+
+<p>TODO</p>
+
+<h3 id="内存相关的硬件知识">内存相关的硬件知识</h3>
+
+<p>感谢<a href="http://duartes.org/gustavo/blog/">Gustavo Duarte</a>，画了下面的双核结构图：</p>
+
+<p><img src="img/physicalMemoryAccess.png" alt="" /></p>
+
+<p>CPU通过 前端总线，即Front Side Bus(FSB)连接到北桥芯片（Northbridge），再连接到
+内存模块。上图列出了主要的3组针脚：“Address Pins”，“Data Pins”和“Request Pins”
+。在FSB中的数据交互的<strong>事务（transaction）</strong>中，主要由这三种数据起作用。</p>
+
+<p>一个FSB的事务分为5个阶段：arbitration, request, snoop, response, data.
+(TODO: 每种阶段的意义）。FSB有不同的组件，通常包括处理器和北桥芯片，这些组件被
+称为<strong>agents</strong>。在每个不同的阶段，agents扮演了不同的角色。</p>
+
+<h4 id="fsb-的-request阶段">FSB 的 request阶段</h4>
+
+<p>我们主要看一下 request 阶段到底发生了哪些事情。在 request 阶段，两个
+包（packet）通过agents输出。</p>
+
+<p>第一个包通过 address pins 和 request pins 输出，其内容如下：</p>
+
+<p><img src="img/fsbRequestPhasePacketA.png" alt="" /></p>
+
+<p>通过 request pins 输出的内容则代表了不同的request类型。</p>
+
+<p>通过 address pins 输出的 address line ，代表这次事务需要操作的物理内存的起始地
+址，但当request类型是I/O read和I/O write时，其输出的内容代表I/O port。</p>
+
+<p>第一个包发送后，第二个包在接下来的时钟周期内发送。第二个包的数据如下：</p>
+
+<p><img src="img/fsbRequestPhasePacketB.png" alt="" /></p>
+
+<p>通过部分 address pins 输出的 attribute signals 代表了Intel处理器中5种不同的缓存
+方式：</p>
+
+<ul>
+  <li>UC, uncacheable, 不做缓存</li>
+  <li>WC, Write-combining, 即把需要写入的信息先存在缓存中，积攒到一定程度后在真的
+写入。参考<a href="http://en.wikipedia.org/wiki/Write-combining">Write-combining</a></li>
+  <li>WT, Write-through, 表示读操作具有缓存，写操作直接写入。</li>
+  <li>WP, Write-protected, 写保护，不可真正写入</li>
+  <li>WB, Write-back, 回写，类似于Linux的Page Cache，数据的变更先在缓存中完成，
+“回头”在真的写入。</li>
+</ul>
+
+<p>通过 attribute signals, request agend 让其他处理器知道这次事务将会如何影响它们
+的缓存，并让内存控制器（北桥）知道该如何行为。</p>
+
+<p>一般的内核都以“回写”模式处理所有内存，一般情况下有最好的性能。在回写模式（WB）
+下，内存访问的单位是<strong>cache line</strong>，即使程序只需要一个bit的数据，处理器也会加载
+整个cache line大小的数据到缓存。（类似于内核中的page frame和硬盘中的block）。</p>
+
+<p>下图中的例子代表了需要从内存获取一份数据的过程：</p>
+
+<p><img src="img/memoryRead.png" alt="" /></p>
+
+<p>在Intel架构中，一部分内存区域被映射到一些设备，比如网卡，于是驱动程序对这些设备
+的操作，就是通过对这部分内存区域的读写完成。内核在页表（page tables）中把这部分
+区域标注为Uncacheable。通过第二个包中的“Byte Enable”掩码，对Uncacheable内存区域
+的访问，可以只单独地只读或写一个字节，一个字等等。</p>
+
+<h4 id="分析">分析</h4>
+
+<p>通过对与内存相关的硬件的理解，可以得到一些应用结论：</p>
+
+<ul>
+  <li>对性能要求很高的程序，应该尽可能地把需要一起访问的数据放到一个cache line大
+小的结构中，这样就可以直接用CPU的缓存而不是使用内存。</li>
+  <li>回写模式下，对一个单独cache line中的内容的操作都是原子（atomic）的。对这些
+内容的访问都发生在处理器的L1缓存中，一次性读出或者写入，不可能中途被其它处
+理器或者线程影响。</li>
+  <li>Front bus被所有的agents共享使用，在一个agents开始一个事务前，必须先经过
+arbitrate（仲裁）来决定由谁来使用。为了保持缓存的一致性，每个agents必须监听
+所有的事务。于是，当越来越多的处理器加入进来时，bus的争用越来越严重。i7内核
+发展出了每个内核对内存直接访问的技术来解决bus争用的问题。</li>
+</ul>
+
+<hr />
+
+<p>参考资料：</p>
+
+<ul>
+  <li><a href="http://duartes.org/gustavo/blog/post/getting-physical-with-memory">Getting Physical With Memory</a></li>
+</ul>
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Linux 系统调用的原理</title>
+  <meta name="description" content="Linux 系统调用的原理">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/tech/2013/12/17/system_call.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Linux 系统调用的原理</h1>
+    <p class="post-meta"><time datetime="2013-12-17T10:00:00+08:00" itemprop="datePublished">Dec 17, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="linux-系统调用的原理">Linux 系统调用的原理</h1>
+
+<p>原始的系统调用是通过中断向量80所代表的的中断来实现：把系统调用号存到一个寄存器
+中，然后发出int 0x80。已经注册号的中断处理程序会检测寄存器的内容，根据不同的系
+统调用号， 提供具体的服务。中断的处理过程分三步：a)保持寄存器的内容；b)调用中断
+处理程序进行处理；c)重新载入之前寄存器的内容，这个过程的开销并不小，所以
+int 0x80的方式，对系统的开销有较大的影响。</p>
+
+<p>后来，Intel推出了两个指令sysenter/sysexit（对于64位系统则是syscall/sysret指令）
+，提供 “快速系统调用”的功能，几年后，Linux开始使用这两个指令实现系统调用，并且
+引入了vDSO的机制。具体是怎么使用的，可以参考
+<a href="http://articles.manugarg.com/systemcallinlinux2_6.html">Sysenter Based System Call Mechanism in Linux 2.6</a>。</p>
+
+<p>vDSO的大概过程：</p>
+
+<ol>
+  <li>内核使用sysenter等指令实现系统调用，这部分代码中主要过程叫做
+<code class="highlighter-rouge">__kernel_vsyscall</code>（封装在一个so中）;</li>
+  <li>使用vDSO机制时，内核在初始化过程中，会拷贝这个so到一个物理页;</li>
+  <li>内核在加载ELF执行文件时，会把这个物理页映射到用户空间，并且会将里面的函数根
+据类型设置到ELF auxiliary vectors中，<code class="highlighter-rouge">__kernel_vsyscall</code>的地址就会设置到
+<code class="highlighter-rouge">AT_SYSINFO</code>类型中；使用ldd查看的话，可以看到ELF文件包含一个叫做
+linux-gate.so.1或者叫linux-vdso.so.1的共享库。</li>
+  <li>glibc中系统调用的核心命令是： <code class="highlighter-rouge">ENTER_KERNEL call *%gs:SYSINFO_OFFSET</code></li>
+  <li>经过复杂的定义声明，最终调用的是ELF auxiliary vectors中AT_SYSINFO类型的地址
+，也就是调用了__kernel_vsyscall</li>
+</ol>
+
+<p>一般情况下，应用程序不直接使用系统调用，而是使用一些glibc封装好的函数，不过内核
+也提供了syscall()方法，让应用程序可以直接发起一个系统调用。</p>
+
+<p>有一些系统调用，比如gettimeofday()，可能会被非常频繁地调用，并且这些系统调用的
+具体过程都类似，读取一个有内核维护的变量的值（比如时间），然后把该值返回到用户
+空间。对于这些系统调用，内核提供了一种“捷径”，使这些系统调用事实上不进入内核空
+间，而是在用户空间执行。大概的原理就是在vDSO的虚拟动态共享库文件中维护了一个变
+量，该变量是由内核更新的，vDSO中只是简单地读取这个变量并返回给调用方，而无需再
+进行sysenter等指令。</p>
+
+<hr />
+
+<p>参考资料：</p>
+
+<ul>
+  <li><a href="http://www.pagefault.info/?p=99">linux下系统调用的实现</a></li>
+  <li><a href="https://lwn.net/Articles/446528/">On vsyscalls and the vDSO</a></li>
+  <li><a href="http://www.pagefault.info/?p=99">linux下系统调用的实现</a></li>
+  <li><a href="http://articles.manugarg.com/aboutelfauxiliaryvectors.html">About ELF Auxiliary Vectors</a></li>
+  <li><a href="http://articles.manugarg.com/systemcallinlinux2_6.html">Sysenter Based System Call Mechanism in Linux 2.6</a></li>
+  <li><a href="http://www.trilithium.com/johan/2005/08/linux-gate/">What is linux-gate.so.1?</a></li>
+  <li><a href="http://www.linuxjournal.com/content/creating-vdso-colonels-other-chicken?page=0,0">Creating a vDSO: the Colonel’s Other Chicken</a></li>
+</ul>
+
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

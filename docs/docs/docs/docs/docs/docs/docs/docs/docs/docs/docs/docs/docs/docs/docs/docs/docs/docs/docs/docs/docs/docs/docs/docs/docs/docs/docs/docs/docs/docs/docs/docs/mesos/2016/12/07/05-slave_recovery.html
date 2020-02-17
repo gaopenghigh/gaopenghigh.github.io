@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Mesos 源码学习(5) Slave Recovery</title>
+  <meta name="description" content="在 Slave 初始化的最后，会进行 recovery ：void Slave::initialize(){  ...  // Do recovery.  async(&amp;state::recover, metaDir, flags.strict)    .then(defer(self(), &amp;S...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://gaopenghigh.github.io/mesos/2016/12/07/05-slave_recovery.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Mesos 源码学习(5) Slave Recovery</h1>
+    <p class="post-meta"><time datetime="2016-12-07T18:00:00+08:00" itemprop="datePublished">Dec 7, 2016</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>在 Slave 初始化的最后，会进行 recovery ：</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="n">Slave</span><span class="o">::</span><span class="n">initialize</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="p">...</span>
+  <span class="c1">// Do recovery.
+</span>  <span class="n">async</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="o">::</span><span class="n">recover</span><span class="p">,</span> <span class="n">metaDir</span><span class="p">,</span> <span class="n">flags</span><span class="p">.</span><span class="n">strict</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">then</span><span class="p">(</span><span class="n">defer</span><span class="p">(</span><span class="n">self</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">Slave</span><span class="o">::</span><span class="n">recover</span><span class="p">,</span> <span class="n">lambda</span><span class="o">::</span><span class="n">_1</span><span class="p">))</span>
+    <span class="p">.</span><span class="n">then</span><span class="p">(</span><span class="n">defer</span><span class="p">(</span><span class="n">self</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">Slave</span><span class="o">::</span><span class="n">_recover</span><span class="p">))</span>
+    <span class="p">.</span><span class="n">onAny</span><span class="p">(</span><span class="n">defer</span><span class="p">(</span><span class="n">self</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">Slave</span><span class="o">::</span><span class="n">__recover</span><span class="p">,</span> <span class="n">lambda</span><span class="o">::</span><span class="n">_1</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>其中 <code class="highlighter-rouge">async()</code> 是 libprocess 提供的一种实现异步调用的方法。</p>
+
+<h2 id="调用-staterecover-从硬盘拿到-state">调用 state::recover 从硬盘拿到 State</h2>
+
+<p>首先调用 <code class="highlighter-rouge">state::recover</code> 获得需要 recover 的信息，这些信息可能被 checkpointed 在硬盘上。
+该方法定义和实现在 <code class="highlighter-rouge">src/slave/state.hpp</code> 和 <code class="highlighter-rouge">src/slave/state.cpp</code> 中。
+大概做的事情就是从硬盘目录中读取 checkpoint 的内容，然后反序列化为一个 <code class="highlighter-rouge">State</code> 结构。</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// This function performs recovery from the state stored at 'rootDir'.
+// If the 'strict' flag is set, any errors encountered while
+// recovering a state are considered fatal and hence the recovery is
+// short-circuited and returns an error. There might be orphaned
+// executors that need to be manually cleaned up. If 'strict' flag is
+// not set, any errors encountered are considered non-fatal and the
+// recovery continues by recovering as much of the state as possible,
+// while increasing the 'errors' count. Note that 'errors' on a struct
+// includes the 'errors' encountered recursively. In other words,
+// 'State.errors' is the sum total of all recovery errors. If the
+// machine has rebooted since the last slave run, None is returned.
+</span><span class="n">Result</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">recover</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">rootDir</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">strict</span><span class="p">);</span>
+</code></pre></div></div>
+
+<h2 id="调用-slaverecover">调用 Slave::recover</h2>
+
+<p>该方法实现在 <code class="highlighter-rouge">src/slave/slave.cpp</code> 中，首先做一些对 State 的检查，
+然后逐个恢复 SlaveInfo，Framwork，Fetcher 和 StatusUpdateManager：</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Future</span><span class="o">&lt;</span><span class="n">Nothing</span><span class="o">&gt;</span> <span class="n">Slave</span><span class="o">::</span><span class="n">recover</span><span class="p">(</span><span class="k">const</span> <span class="n">Result</span><span class="o">&lt;</span><span class="n">state</span><span class="o">::</span><span class="n">State</span><span class="o">&gt;&amp;</span> <span class="n">state</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="p">...</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="n">slaveState</span><span class="p">.</span><span class="n">get</span><span class="p">().</span><span class="n">info</span><span class="p">.</span><span class="n">get</span><span class="p">();</span> <span class="c1">// Recover the slave info.
+</span>	<span class="p">...</span>
+    <span class="n">Try</span><span class="o">&lt;</span><span class="n">Nothing</span><span class="o">&gt;</span> <span class="n">recovered</span> <span class="o">=</span> <span class="n">Fetcher</span><span class="o">::</span><span class="n">recover</span><span class="p">(</span><span class="n">slaveState</span><span class="p">.</span><span class="n">get</span><span class="p">().</span><span class="n">id</span><span class="p">,</span> <span class="n">flags</span><span class="p">);</span>
+    <span class="p">...</span>
+    <span class="c1">// Recover the frameworks.
+</span>    <span class="n">foreachvalue</span> <span class="p">(</span><span class="k">const</span> <span class="n">FrameworkState</span><span class="o">&amp;</span> <span class="n">frameworkState</span><span class="p">,</span>
+                  <span class="n">slaveState</span><span class="p">.</span><span class="n">get</span><span class="p">().</span><span class="n">frameworks</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">recoverFramework</span><span class="p">(</span><span class="n">frameworkState</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">...</span>
+  <span class="k">return</span> <span class="n">statusUpdateManager</span><span class="o">-&gt;</span><span class="n">recover</span><span class="p">(</span><span class="n">metaDir</span><span class="p">,</span> <span class="n">slaveState</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">then</span><span class="p">(</span><span class="n">defer</span><span class="p">(</span><span class="n">self</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">Slave</span><span class="o">::</span><span class="n">_recoverContainerizer</span><span class="p">,</span> <span class="n">slaveState</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="recover-slaveinfo">Recover SlaveInfo</h3>
+
+<p>SlaveInfo 存在 <code class="highlighter-rouge">Slave</code> 类的 <code class="highlighter-rouge">info</code> 属性中，这里就简单地做一下赋值。</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">SlaveInfo</span> <span class="n">info</span><span class="p">;</span>
+</code></pre></div></div>
+
+<h3 id="recover-fetcher">Recover Fetcher</h3>
+
+<p>Fetcher 的 recover 比较简单，就是把 fetcher cache 清理掉。
+代码在 <code class="highlighter-rouge">src/slave/containerizer/fetcher.cpp</code>。</p>
+
+<h3 id="recover-frameworks">Recover Frameworks</h3>
+
+<p><code class="highlighter-rouge">Slave</code> 类中有一个字段 <code class="highlighter-rouge">frameworks</code>，是一个 hashmap，保持在这个 slave 上有 executor 的所有的
+Framework。定义是：</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">hashmap</span><span class="o">&lt;</span><span class="n">FrameworkID</span><span class="p">,</span> <span class="n">Framework</span><span class="o">*&gt;</span> <span class="n">frameworks</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>Framework recover 实现在 <code class="highlighter-rouge">Slave::recoverFramework</code> 中，主要逻辑是：</p>
+<ol>
+  <li>如果从 checkpoint 拿到的 state 中 executor 的数量为空，也就是之前没有 task 运行，那么就把
+Framework 的 work dir 和 meta dir 做一次垃圾回收，然后返回。</li>
+  <li>根据 state 重新创建一个 Framework 实例，然后放在 Slave 的 <code class="highlighter-rouge">frameworks</code> 属性中。</li>
+  <li>如果 state 中 executors 不为空，则调用 <code class="highlighter-rouge">framework-&gt;recoverExecutor</code> 方法恢复 executor。</li>
+  <li>最后检查一下 framework 中恢复出来的 executors ，如果数量为空，那么就把这个 framework 移除。</li>
+</ol>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="n">Slave</span><span class="o">::</span><span class="n">recoverFramework</span><span class="p">(</span><span class="k">const</span> <span class="n">FrameworkState</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">LOG</span><span class="p">(</span><span class="n">INFO</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="s">"Recovering framework "</span> <span class="o">&lt;&lt;</span> <span class="n">state</span><span class="p">.</span><span class="n">id</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">state</span><span class="p">.</span><span class="n">executors</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+    <span class="c1">// GC the framework work directory.
+</span>    <span class="n">garbageCollect</span><span class="p">(</span>
+        <span class="n">paths</span><span class="o">::</span><span class="n">getFrameworkPath</span><span class="p">(</span><span class="n">flags</span><span class="p">.</span><span class="n">work_dir</span><span class="p">,</span> <span class="n">info</span><span class="p">.</span><span class="n">id</span><span class="p">(),</span> <span class="n">state</span><span class="p">.</span><span class="n">id</span><span class="p">));</span>
+
+    <span class="c1">// GC the framework meta directory.
+</span>    <span class="n">garbageCollect</span><span class="p">(</span>
+        <span class="n">paths</span><span class="o">::</span><span class="n">getFrameworkPath</span><span class="p">(</span><span class="n">metaDir</span><span class="p">,</span> <span class="n">info</span><span class="p">.</span><span class="n">id</span><span class="p">(),</span> <span class="n">state</span><span class="p">.</span><span class="n">id</span><span class="p">));</span>
+
+    <span class="k">return</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="p">...</span>
+
+  <span class="n">Framework</span><span class="o">*</span> <span class="n">framework</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Framework</span><span class="p">(</span>
+      <span class="k">this</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">frameworkInfo</span><span class="p">,</span> <span class="n">pid</span><span class="p">);</span>
+
+  <span class="n">frameworks</span><span class="p">[</span><span class="n">framework</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">()]</span> <span class="o">=</span> <span class="n">framework</span><span class="p">;</span>
+
+  <span class="p">...</span>
+  <span class="c1">// Now recover the executors for this framework.
+</span>  <span class="n">foreachvalue</span> <span class="p">(</span><span class="k">const</span> <span class="n">ExecutorState</span><span class="o">&amp;</span> <span class="n">executorState</span><span class="p">,</span> <span class="n">state</span><span class="p">.</span><span class="n">executors</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">framework</span><span class="o">-&gt;</span><span class="n">recoverExecutor</span><span class="p">(</span><span class="n">executorState</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="c1">// Remove the framework in case we didn't recover any executors.
+</span>  <span class="k">if</span> <span class="p">(</span><span class="n">framework</span><span class="o">-&gt;</span><span class="n">executors</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+    <span class="n">removeFramework</span><span class="p">(</span><span class="n">framework</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>这里 <code class="highlighter-rouge">Framework</code> 是一个 struct ，同样实现在 <code class="highlighter-rouge">src/slave/slave.cpp</code> 中。</p>
+
+<p><code class="highlighter-rouge">Framework::recoverExecutor</code> 的主要逻辑是：</p>
+<ol>
+  <li>一个 executor 可能 run 了很多次，而我们只需要恢复最近的一次，所以会先做一次 GC，清理除了最近一次
+run 的 executor work dir 和 executor meta dir</li>
+  <li>根据 executorState 的 latest run，创建一个 <code class="highlighter-rouge">Executor</code> struct，状态为默认的 <code class="highlighter-rouge">REGISTERING</code>，
+然后恢复 executor process 的 PID。
+<code class="highlighter-rouge">Executor</code> struct 也同样实现在 <code class="highlighter-rouge">src/slave/slave.cpp</code> 中。</li>
+  <li>调用 <code class="highlighter-rouge">executor-&gt;recoverTask</code> 对 executor 的每一个 task 进行恢复</li>
+  <li>把这个 executor 放在 Framework 的 <code class="highlighter-rouge">executors</code> 属性里面，
+这是一个 hasmap：<code class="highlighter-rouge">hashmap&lt;ExecutorID, Executor*&gt; executors</code>，表示正在 running 的所有 executor</li>
+  <li>如果发现这个 executor 现在已经 completed，则把它的状态置为 <code class="highlighter-rouge">Executor::TERMINATED</code>，然后做垃圾回收</li>
+</ol>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="n">Framework</span><span class="o">::</span><span class="n">recoverExecutor</span><span class="p">(</span><span class="k">const</span> <span class="n">ExecutorState</span><span class="o">&amp;</span> <span class="n">state</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">...</span>
+  <span class="c1">// We are only interested in the latest run of the executor!
+</span>  <span class="c1">// So, we GC all the old runs.
+</span>  <span class="c1">// NOTE: We don't schedule the top level executor work and meta
+</span>  <span class="c1">// directories for GC here, because they will be scheduled when
+</span>  <span class="c1">// the latest executor run terminates.
+</span>  <span class="k">const</span> <span class="n">ContainerID</span><span class="o">&amp;</span> <span class="n">latest</span> <span class="o">=</span> <span class="n">state</span><span class="p">.</span><span class="n">latest</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
+  <span class="n">foreachvalue</span> <span class="p">(</span><span class="k">const</span> <span class="n">RunState</span><span class="o">&amp;</span> <span class="n">run</span><span class="p">,</span> <span class="n">state</span><span class="p">.</span><span class="n">runs</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">CHECK_SOME</span><span class="p">(</span><span class="n">run</span><span class="p">.</span><span class="n">id</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">ContainerID</span><span class="o">&amp;</span> <span class="n">runId</span> <span class="o">=</span> <span class="n">run</span><span class="p">.</span><span class="n">id</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">latest</span> <span class="o">!=</span> <span class="n">runId</span><span class="p">)</span> <span class="p">{</span>
+      <span class="c1">// GC the executor run's work directory.
+</span>      <span class="n">slave</span><span class="o">-&gt;</span><span class="n">garbageCollect</span><span class="p">(</span><span class="n">paths</span><span class="o">::</span><span class="n">getExecutorRunPath</span><span class="p">(</span>
+          <span class="n">slave</span><span class="o">-&gt;</span><span class="n">flags</span><span class="p">.</span><span class="n">work_dir</span><span class="p">,</span> <span class="n">slave</span><span class="o">-&gt;</span><span class="n">info</span><span class="p">.</span><span class="n">id</span><span class="p">(),</span> <span class="n">id</span><span class="p">(),</span> <span class="n">state</span><span class="p">.</span><span class="n">id</span><span class="p">,</span> <span class="n">runId</span><span class="p">));</span>
+
+      <span class="c1">// GC the executor run's meta directory.
+</span>      <span class="n">slave</span><span class="o">-&gt;</span><span class="n">garbageCollect</span><span class="p">(</span><span class="n">paths</span><span class="o">::</span><span class="n">getExecutorRunPath</span><span class="p">(</span>
+          <span class="n">slave</span><span class="o">-&gt;</span><span class="n">metaDir</span><span class="p">,</span> <span class="n">slave</span><span class="o">-&gt;</span><span class="n">info</span><span class="p">.</span><span class="n">id</span><span class="p">(),</span> <span class="n">id</span><span class="p">(),</span> <span class="n">state</span><span class="p">.</span><span class="n">id</span><span class="p">,</span> <span class="n">runId</span><span class="p">));</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="p">...</span>
+  <span class="n">Option</span><span class="o">&lt;</span><span class="n">RunState</span><span class="o">&gt;</span> <span class="n">run</span> <span class="o">=</span> <span class="n">state</span><span class="p">.</span><span class="n">runs</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">latest</span><span class="p">);</span>
+  <span class="p">...</span>
+  <span class="n">Executor</span><span class="o">*</span> <span class="n">executor</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Executor</span><span class="p">(</span>
+      <span class="n">slave</span><span class="p">,</span>
+      <span class="n">id</span><span class="p">(),</span>
+      <span class="n">state</span><span class="p">.</span><span class="n">info</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span>
+      <span class="n">latest</span><span class="p">,</span>
+      <span class="n">directory</span><span class="p">,</span>
+      <span class="n">info</span><span class="p">.</span><span class="n">user</span><span class="p">(),</span>
+      <span class="n">info</span><span class="p">.</span><span class="n">checkpoint</span><span class="p">());</span>
+  <span class="p">...</span>
+  <span class="n">executor</span><span class="o">-&gt;</span><span class="n">pid</span> <span class="o">=</span> <span class="n">run</span><span class="p">.</span><span class="n">get</span><span class="p">().</span><span class="n">libprocessPid</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
+  <span class="p">...</span>
+  <span class="c1">// And finally recover all the executor's tasks.
+</span>  <span class="n">foreachvalue</span> <span class="p">(</span><span class="k">const</span> <span class="n">TaskState</span><span class="o">&amp;</span> <span class="n">taskState</span><span class="p">,</span> <span class="n">run</span><span class="p">.</span><span class="n">get</span><span class="p">().</span><span class="n">tasks</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">executor</span><span class="o">-&gt;</span><span class="n">recoverTask</span><span class="p">(</span><span class="n">taskState</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="p">...</span>
+  <span class="c1">// Add the executor to the framework.
+</span>  <span class="n">executors</span><span class="p">[</span><span class="n">executor</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">executor</span><span class="p">;</span>
+  <span class="c1">// If the latest run of the executor was completed (i.e., terminated
+</span>  <span class="c1">// and all updates are acknowledged) in the previous run, we
+</span>  <span class="c1">// transition its state to 'TERMINATED' and gc the directories.
+</span>  <span class="k">if</span> <span class="p">(</span><span class="n">run</span><span class="p">.</span><span class="n">get</span><span class="p">().</span><span class="n">completed</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+	<span class="c1">// Move the executor to 'completedExecutors'.
+</span>    <span class="n">destroyExecutor</span><span class="p">(</span><span class="n">executor</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="k">return</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">Executor</code> struct 里面通过4个数据结构管理它的 task，一个 task 会存放在4个数据结构中的某一个：</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="c1">// Tasks can be found in one of the following four data structures:
+</span>
+  <span class="c1">// Not yet launched tasks. This also includes tasks from `queuedTaskGroups`.
+</span>  <span class="n">LinkedHashMap</span><span class="o">&lt;</span><span class="n">TaskID</span><span class="p">,</span> <span class="n">TaskInfo</span><span class="o">&gt;</span> <span class="n">queuedTasks</span><span class="p">;</span>
+
+  <span class="c1">// Not yet launched task groups. This is needed for correctly sending
+</span>  <span class="c1">// TASK_KILLED status updates for all tasks in the group if any of the
+</span>  <span class="c1">// tasks were killed before the executor could register with the agent.
+</span>  <span class="c1">//
+</span>  <span class="c1">// TODO(anand): Replace this with `LinkedHashSet` when it is available.
+</span>  <span class="n">std</span><span class="o">::</span><span class="n">list</span><span class="o">&lt;</span><span class="n">TaskGroupInfo</span><span class="o">&gt;</span> <span class="n">queuedTaskGroups</span><span class="p">;</span>
+
+  <span class="c1">// Running.
+</span>  <span class="n">LinkedHashMap</span><span class="o">&lt;</span><span class="n">TaskID</span><span class="p">,</span> <span class="n">Task</span><span class="o">*&gt;</span> <span class="n">launchedTasks</span><span class="p">;</span>
+
+  <span class="c1">// Terminated but pending updates.
+</span>  <span class="n">LinkedHashMap</span><span class="o">&lt;</span><span class="n">TaskID</span><span class="p">,</span> <span class="n">Task</span><span class="o">*&gt;</span> <span class="n">terminatedTasks</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>另外还有一个环形 buffer 存放已经 completed 的 task：</p>
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="c1">// Terminated and updates acked.
+</span>  <span class="c1">// NOTE: We use a shared pointer for Task because clang doesn't like
+</span>  <span class="c1">// Boost's implementation of circular_buffer with Task (Boost
+</span>  <span class="c1">// attempts to do some memset's which are unsafe).
+</span>  <span class="n">boost</span><span class="o">::</span><span class="n">circular_buffer</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Task</span><span class="o">&gt;&gt;</span> <span class="n">completedTasks</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">Executor::recoverTask</code> 的主要逻辑是：</p>
+<ol>
+  <li>根据 <code class="highlighter-rouge">taskState</code> 创新创建出一个 <code class="highlighter-rouge">Task</code>，加到 <code class="highlighter-rouge">launchedTasks</code> 里面。
+这是 <code class="highlighter-rouge">Executor</code> struct 的一个属性，是一个 hasmap：<code class="highlighter-rouge">LinkedHashMap&lt;TaskID, Task*&gt; launchedTasks</code>，
+表示所有 running 的 Task。</li>
+  <li>恢复 resources 统计</li>
+  <li>调用 <code class="highlighter-rouge">Executor::updateTaskState</code> 更新 task 状态，事实上就是更新那4个存放 task 的数据结构。</li>
+  <li>当一个 task 已经 terminal 并 terminal 的状态更新已经被 acknowledged，那就把它从 <code class="highlighter-rouge">terminatedTasks</code>
+中移除并且加入到 <code class="highlighter-rouge">completedTasks</code> 中。</li>
+</ol>
+
+<h3 id="recover-statusupdatemanager">Recover StatusUpdateManager</h3>
+
+<p>这是 <code class="highlighter-rouge">Slave::recover</code> 的最后一步，代码是：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Future&lt;Nothing&gt; Slave::recover(const Result&lt;state::State&gt;&amp; state)
+{
+  ...
+  return statusUpdateManager-&gt;recover(metaDir, slaveState)
+    .then(defer(self(), &amp;Slave::_recoverContainerizer, slaveState));
+}
+</code></pre></div></div>
+
+<p>就是先调用 <code class="highlighter-rouge">StatusUpdateManager::recover</code> 方法，成功后调用 <code class="highlighter-rouge">Slave::_recoverContainerizer</code>。</p>
+
+<h4 id="statusupdatemanagerrecover">StatusUpdateManager::recover</h4>
+
+<p><code class="highlighter-rouge">StatusUpdateManagerProcess</code> 维护了一个叫 <code class="highlighter-rouge">streams</code> 的 hashmap ：</p>
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="n">hashmap</span><span class="o">&lt;</span><span class="n">FrameworkID</span><span class="p">,</span> <span class="n">hashmap</span><span class="o">&lt;</span><span class="n">TaskID</span><span class="p">,</span> <span class="n">StatusUpdateStream</span><span class="o">*&gt;&gt;</span> <span class="n">streams</span><span class="p">;</span>
+</code></pre></div></div>
+<p>这个 map 为每个 Framework 的每一个 Task 存了一个 <code class="highlighter-rouge">StatusUpdateStream*</code>。
+该结构负责处理 task 状态的更新和确认。大概就是里面维护了一个 pending 的队列，每隔一段时间会从队列中
+取出一个 Update 来去 forward ，也就是调用从 slave 传进来的 forward 回调函数，最终会发给 master。</p>
+
+<p><code class="highlighter-rouge">StatusUpdateManager::recover</code> 方法实现在 <code class="highlighter-rouge">src/slave/src/slave/status_update_manager.cpp</code> 中。
+主要逻辑就是对 slave 上每个 framework 的每个 latest executor 的每个 task，
+生成一个 <code class="highlighter-rouge">StatusUpdateStream</code>，然后去 replay，也就是向 master 去汇报。</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Future</span><span class="o">&lt;</span><span class="n">Nothing</span><span class="o">&gt;</span> <span class="n">StatusUpdateManager</span><span class="o">::</span><span class="n">recover</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">rootDir</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">Option</span><span class="o">&lt;</span><span class="n">SlaveState</span><span class="o">&gt;&amp;</span> <span class="n">state</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">return</span> <span class="n">dispatch</span><span class="p">(</span>
+      <span class="n">process</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">StatusUpdateManagerProcess</span><span class="o">::</span><span class="n">recover</span><span class="p">,</span> <span class="n">rootDir</span><span class="p">,</span> <span class="n">state</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="p">...</span>
+<span class="n">Future</span><span class="o">&lt;</span><span class="n">Nothing</span><span class="o">&gt;</span> <span class="n">StatusUpdateManagerProcess</span><span class="o">::</span><span class="n">recover</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">rootDir</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">Option</span><span class="o">&lt;</span><span class="n">SlaveState</span><span class="o">&gt;&amp;</span> <span class="n">state</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">foreachvalue</span> <span class="p">(</span><span class="k">const</span> <span class="n">FrameworkState</span><span class="o">&amp;</span> <span class="n">framework</span><span class="p">,</span> <span class="n">state</span><span class="p">.</span><span class="n">get</span><span class="p">().</span><span class="n">frameworks</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">foreachvalue</span> <span class="p">(</span><span class="k">const</span> <span class="n">ExecutorState</span><span class="o">&amp;</span> <span class="n">executor</span><span class="p">,</span> <span class="n">framework</span><span class="p">.</span><span class="n">executors</span><span class="p">)</span> <span class="p">{</span>
+	<span class="p">...</span>
+	<span class="k">const</span> <span class="n">ContainerID</span><span class="o">&amp;</span> <span class="n">latest</span> <span class="o">=</span> <span class="n">executor</span><span class="p">.</span><span class="n">latest</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
+    <span class="n">Option</span><span class="o">&lt;</span><span class="n">RunState</span><span class="o">&gt;</span> <span class="n">run</span> <span class="o">=</span> <span class="n">executor</span><span class="p">.</span><span class="n">runs</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">latest</span><span class="p">);</span>
+	<span class="p">...</span>
+	<span class="n">foreachvalue</span> <span class="p">(</span><span class="k">const</span> <span class="n">TaskState</span><span class="o">&amp;</span> <span class="n">task</span><span class="p">,</span> <span class="n">run</span><span class="p">.</span><span class="n">get</span><span class="p">().</span><span class="n">tasks</span><span class="p">)</span> <span class="p">{</span>
+	  <span class="p">...</span>
+	  <span class="c1">// Create a new status update stream.
+</span>      <span class="n">StatusUpdateStream</span><span class="o">*</span> <span class="n">stream</span> <span class="o">=</span> <span class="n">createStatusUpdateStream</span><span class="p">(</span>
+            <span class="n">task</span><span class="p">.</span><span class="n">id</span><span class="p">,</span> <span class="n">framework</span><span class="p">.</span><span class="n">id</span><span class="p">,</span> <span class="n">state</span><span class="p">.</span><span class="n">get</span><span class="p">().</span><span class="n">id</span><span class="p">,</span> <span class="nb">true</span><span class="p">,</span> <span class="n">executor</span><span class="p">.</span><span class="n">id</span><span class="p">,</span> <span class="n">latest</span><span class="p">);</span>
+	  <span class="c1">// Replay the stream.
+</span>      <span class="n">Try</span><span class="o">&lt;</span><span class="n">Nothing</span><span class="o">&gt;</span> <span class="n">replay</span> <span class="o">=</span> <span class="n">stream</span><span class="o">-&gt;</span><span class="n">replay</span><span class="p">(</span><span class="n">task</span><span class="p">.</span><span class="n">updates</span><span class="p">,</span> <span class="n">task</span><span class="p">.</span><span class="n">acks</span><span class="p">);</span>
+	  <span class="p">...</span>
+	  <span class="k">if</span> <span class="p">(</span><span class="n">stream</span><span class="o">-&gt;</span><span class="n">terminated</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">cleanupStatusUpdateStream</span><span class="p">(</span><span class="n">task</span><span class="p">.</span><span class="n">id</span><span class="p">,</span> <span class="n">framework</span><span class="p">.</span><span class="n">id</span><span class="p">);</span>
+      <span class="p">}</span>
+	<span class="p">}</span>
+	<span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="调用-slave_recover">调用 <code class="highlighter-rouge">Slave::_recover</code></h2>
+
+<p><code class="highlighter-rouge">Slave::_recover</code> 方法负责 Containerizer 的恢复。主要逻辑如下：</p>
+
+<ol>
+  <li>针对 Slave 中记录的所有 framework 的所有 executor：
+    <ol>
+      <li>设置一个回调函数 <code class="highlighter-rouge">Slave::executorTerminated</code>，该回调函数在 executor 终结时被调用。</li>
+      <li>如果 slave 启动时指定了 <code class="highlighter-rouge">--rocover=reconnect</code>，就找到 executor process 的 PID，然后创建出一个
+<code class="highlighter-rouge">ReconnectExecutorMessage</code> 消息，发送给 executor process 。</li>
+      <li>如果 slave 启动时参数 <code class="highlighter-rouge">--recover</code> 的值不是 <code class="highlighter-rouge">reconnect</code>，就调用 <code class="highlighter-rouge">_shutdownExecutor</code> 把这个
+executor 关闭</li>
+    </ol>
+  </li>
+  <li>在等待一段时间后，调用 <code class="highlighter-rouge">Slave::reregisterExecutorTimeout</code> 清理所有没有重新注册的 executor 。</li>
+</ol>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Future</span><span class="o">&lt;</span><span class="n">Nothing</span><span class="o">&gt;</span> <span class="n">Slave</span><span class="o">::</span><span class="n">_recover</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="c1">// Alow HTTP based executors to subscribe after the
+</span>  <span class="c1">// containerizer recovery is complete.
+</span>  <span class="n">recoveryInfo</span><span class="p">.</span><span class="n">reconnect</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+
+  <span class="n">foreachvalue</span> <span class="p">(</span><span class="n">Framework</span><span class="o">*</span> <span class="n">framework</span><span class="p">,</span> <span class="n">frameworks</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">foreachvalue</span> <span class="p">(</span><span class="n">Executor</span><span class="o">*</span> <span class="n">executor</span><span class="p">,</span> <span class="n">framework</span><span class="o">-&gt;</span><span class="n">executors</span><span class="p">)</span> <span class="p">{</span>
+      <span class="c1">// Set up callback for executor termination.
+</span>      <span class="n">containerizer</span><span class="o">-&gt;</span><span class="n">wait</span><span class="p">(</span><span class="n">executor</span><span class="o">-&gt;</span><span class="n">containerId</span><span class="p">)</span>
+        <span class="p">.</span><span class="n">onAny</span><span class="p">(</span><span class="n">defer</span><span class="p">(</span><span class="n">self</span><span class="p">(),</span>
+                     <span class="o">&amp;</span><span class="n">Self</span><span class="o">::</span><span class="n">executorTerminated</span><span class="p">,</span>
+                     <span class="n">framework</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">(),</span>
+                     <span class="n">executor</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">,</span>
+                     <span class="n">lambda</span><span class="o">::</span><span class="n">_1</span><span class="p">));</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="n">flags</span><span class="p">.</span><span class="n">recover</span> <span class="o">==</span> <span class="s">"reconnect"</span><span class="p">)</span> <span class="p">{</span>
+	    <span class="p">...</span>
+		<span class="n">ReconnectExecutorMessage</span> <span class="n">message</span><span class="p">;</span>
+        <span class="n">message</span><span class="p">.</span><span class="n">mutable_slave_id</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">MergeFrom</span><span class="p">(</span><span class="n">info</span><span class="p">.</span><span class="n">id</span><span class="p">());</span>
+        <span class="n">send</span><span class="p">(</span><span class="n">executor</span><span class="o">-&gt;</span><span class="n">pid</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span> <span class="n">message</span><span class="p">);</span>
+		<span class="p">...</span>
+	  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+	    <span class="p">...</span>
+		<span class="n">_shutdownExecutor</span><span class="p">(</span><span class="n">framework</span><span class="p">,</span> <span class="n">executor</span><span class="p">);</span>
+		<span class="p">...</span>
+	  <span class="p">}</span>
+	  <span class="p">...</span>
+	<span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">frameworks</span><span class="p">.</span><span class="n">empty</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="n">flags</span><span class="p">.</span><span class="n">recover</span> <span class="o">==</span> <span class="s">"reconnect"</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Cleanup unregistered executors after a delay.
+</span>    <span class="n">delay</span><span class="p">(</span><span class="n">EXECUTOR_REREGISTER_TIMEOUT</span><span class="p">,</span>
+          <span class="n">self</span><span class="p">(),</span>
+          <span class="o">&amp;</span><span class="n">Slave</span><span class="o">::</span><span class="n">reregisterExecutorTimeout</span><span class="p">);</span>
+
+    <span class="c1">// We set 'recovered' flag inside reregisterExecutorTimeout(),
+</span>    <span class="c1">// so that when the slave re-registers with master it can
+</span>    <span class="c1">// correctly inform the master about the launched tasks.
+</span>    <span class="k">return</span> <span class="n">recoveryInfo</span><span class="p">.</span><span class="n">recovered</span><span class="p">.</span><span class="n">future</span><span class="p">();</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="n">Nothing</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="设置回调函数当-executor-终结时调用">设置回调函数，当 executor 终结时调用</h3>
+
+<p><code class="highlighter-rouge">containerizer-&gt;wait</code> 定义在 <code class="highlighter-rouge">src/slave/containerizer/containerizer.hpp</code>，它会等待 executor 终结，
+然后做一些容器上下文的清理（destroy the containerized context）。</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="c1">// Wait on the 'ContainerTermination'. If the executor terminates,
+</span>  <span class="c1">// the containerizer should also destroy the containerized context.
+</span>  <span class="c1">// Returns None if the container cannot be found.
+</span>  <span class="c1">// The future may be failed if an error occurs during termination of
+</span>  <span class="c1">// the executor or destruction of the container.
+</span>  <span class="k">virtual</span> <span class="n">process</span><span class="o">::</span><span class="n">Future</span><span class="o">&lt;</span><span class="n">Option</span><span class="o">&lt;</span><span class="n">mesos</span><span class="o">::</span><span class="n">slave</span><span class="o">::</span><span class="n">ContainerTermination</span><span class="o">&gt;&gt;</span> <span class="n">wait</span><span class="p">(</span>
+      <span class="k">const</span> <span class="n">ContainerID</span><span class="o">&amp;</span> <span class="n">containerId</span><span class="p">)</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>这里传进去的回调函数是 <code class="highlighter-rouge">Self::executorTerminated</code> ，它的主要逻辑是：</p>
+
+<ol>
+  <li>做一些 termination 的检查。</li>
+  <li>通过 <code class="highlighter-rouge">sendExecutorTerminatedStatusUpdate</code> 方法把 executor 中所有未完成的 task 的状态设置为
+<code class="highlighter-rouge">TASK_FAILED</code> 或者 <code class="highlighter-rouge">TASK_GONE</code>。</li>
+  <li>如果这是一个 Command Executor，则向 master 发送一个 <code class="highlighter-rouge">ExitedExecutorMessage</code> 消息。</li>
+  <li>如果 slave 或者 framework 的状态是 <code class="highlighter-rouge">TERMINATING</code>，即正在终结，就调用 <code class="highlighter-rouge">removeExecutor</code> 把
+executor 删掉。</li>
+  <li>如果这个 executor 的 framework 已经没有其他 pending 的 executor 和 task 了，就调用
+<code class="highlighter-rouge">removeFramework</code> 把这个 framework 删除。</li>
+</ol>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Called by the isolator when an executor process terminates.
+</span><span class="kt">void</span> <span class="n">Slave</span><span class="o">::</span><span class="n">executorTerminated</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">FrameworkID</span><span class="o">&amp;</span> <span class="n">frameworkId</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ExecutorID</span><span class="o">&amp;</span> <span class="n">executorId</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">Future</span><span class="o">&lt;</span><span class="n">Option</span><span class="o">&lt;</span><span class="n">ContainerTermination</span><span class="o">&gt;&gt;&amp;</span> <span class="n">termination</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">Framework</span><span class="o">*</span> <span class="n">framework</span> <span class="o">=</span> <span class="n">getFramework</span><span class="p">(</span><span class="n">frameworkId</span><span class="p">);</span>
+  <span class="p">...</span>
+  <span class="n">Executor</span><span class="o">*</span> <span class="n">executor</span> <span class="o">=</span> <span class="n">framework</span><span class="o">-&gt;</span><span class="n">getExecutor</span><span class="p">(</span><span class="n">executorId</span><span class="p">);</span>
+  <span class="p">...</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">framework</span><span class="o">-&gt;</span><span class="n">state</span> <span class="o">!=</span> <span class="n">Framework</span><span class="o">::</span><span class="n">TERMINATING</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Transition all live launched tasks.
+</span>    <span class="n">foreach</span> <span class="p">(</span><span class="n">Task</span><span class="o">*</span> <span class="n">task</span><span class="p">,</span> <span class="n">executor</span><span class="o">-&gt;</span><span class="n">launchedTasks</span><span class="p">.</span><span class="n">values</span><span class="p">())</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">protobuf</span><span class="o">::</span><span class="n">isTerminalState</span><span class="p">(</span><span class="n">task</span><span class="o">-&gt;</span><span class="n">state</span><span class="p">()))</span> <span class="p">{</span>
+        <span class="n">sendExecutorTerminatedStatusUpdate</span><span class="p">(</span>
+            <span class="n">task</span><span class="o">-&gt;</span><span class="n">task_id</span><span class="p">(),</span> <span class="n">termination</span><span class="p">,</span> <span class="n">frameworkId</span><span class="p">,</span> <span class="n">executor</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Transition all queued tasks.
+</span>    <span class="n">foreach</span> <span class="p">(</span><span class="k">const</span> <span class="n">TaskInfo</span><span class="o">&amp;</span> <span class="n">task</span><span class="p">,</span> <span class="n">executor</span><span class="o">-&gt;</span><span class="n">queuedTasks</span><span class="p">.</span><span class="n">values</span><span class="p">())</span> <span class="p">{</span>
+      <span class="n">sendExecutorTerminatedStatusUpdate</span><span class="p">(</span>
+          <span class="n">task</span><span class="p">.</span><span class="n">task_id</span><span class="p">(),</span> <span class="n">termination</span><span class="p">,</span> <span class="n">frameworkId</span><span class="p">,</span> <span class="n">executor</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="p">...</span>
+  <span class="c1">// Only send ExitedExecutorMessage if it is not a Command
+</span>  <span class="c1">// Executor because the master doesn't store them; they are
+</span>  <span class="c1">// generated by the slave.
+</span>  <span class="c1">// TODO(vinod): Reliably forward this message to the master.
+</span>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">executor</span><span class="o">-&gt;</span><span class="n">isCommandExecutor</span><span class="p">())</span> <span class="p">{</span>
+    <span class="n">ExitedExecutorMessage</span> <span class="n">message</span><span class="p">;</span>
+    <span class="n">message</span><span class="p">.</span><span class="n">mutable_slave_id</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">MergeFrom</span><span class="p">(</span><span class="n">info</span><span class="p">.</span><span class="n">id</span><span class="p">());</span>
+    <span class="n">message</span><span class="p">.</span><span class="n">mutable_framework_id</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">MergeFrom</span><span class="p">(</span><span class="n">frameworkId</span><span class="p">);</span>
+    <span class="n">message</span><span class="p">.</span><span class="n">mutable_executor_id</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">MergeFrom</span><span class="p">(</span><span class="n">executorId</span><span class="p">);</span>
+    <span class="n">message</span><span class="p">.</span><span class="n">set_status</span><span class="p">(</span><span class="n">status</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">master</span><span class="p">.</span><span class="n">isSome</span><span class="p">())</span> <span class="p">{</span> <span class="n">send</span><span class="p">(</span><span class="n">master</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span> <span class="n">message</span><span class="p">);</span> <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="p">...</span>
+  <span class="c1">// Remove the executor if either the slave or framework is
+</span>  <span class="c1">// terminating or there are no incomplete tasks.
+</span>  <span class="k">if</span> <span class="p">(</span><span class="n">state</span> <span class="o">==</span> <span class="n">TERMINATING</span> <span class="o">||</span>
+      <span class="n">framework</span><span class="o">-&gt;</span><span class="n">state</span> <span class="o">==</span> <span class="n">Framework</span><span class="o">::</span><span class="n">TERMINATING</span> <span class="o">||</span>
+      <span class="o">!</span><span class="n">executor</span><span class="o">-&gt;</span><span class="n">incompleteTasks</span><span class="p">())</span> <span class="p">{</span>
+    <span class="n">removeExecutor</span><span class="p">(</span><span class="n">framework</span><span class="p">,</span> <span class="n">executor</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="c1">// Remove this framework if it has no pending executors and tasks.
+</span>  <span class="k">if</span> <span class="p">(</span><span class="n">framework</span><span class="o">-&gt;</span><span class="n">executors</span><span class="p">.</span><span class="n">empty</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="n">framework</span><span class="o">-&gt;</span><span class="n">pending</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+    <span class="n">removeFramework</span><span class="p">(</span><span class="n">framework</span><span class="p">);</span>
+  <span class="p">}</span>
+</code></pre></div></div>
+
+<p>其中，<code class="highlighter-rouge">sendExecutorTerminatedStatusUpdate</code> 负责发送 executor 已经终结的消息。
+该方法会判断 executor 的终结状态，然后创建出一个 <code class="highlighter-rouge">StatusUpdate</code> 消息，并最终发送给 master 。</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="n">Slave</span><span class="o">::</span><span class="n">sendExecutorTerminatedStatusUpdate</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">TaskID</span><span class="o">&amp;</span> <span class="n">taskId</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">Future</span><span class="o">&lt;</span><span class="n">Option</span><span class="o">&lt;</span><span class="n">ContainerTermination</span><span class="o">&gt;&gt;&amp;</span> <span class="n">termination</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">FrameworkID</span><span class="o">&amp;</span> <span class="n">frameworkId</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">Executor</span><span class="o">*</span> <span class="n">executor</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">statusUpdate</span><span class="p">(</span><span class="n">protobuf</span><span class="o">::</span><span class="n">createStatusUpdate</span><span class="p">(</span>
+      <span class="n">frameworkId</span><span class="p">,</span>
+      <span class="n">info</span><span class="p">.</span><span class="n">id</span><span class="p">(),</span>
+      <span class="n">taskId</span><span class="p">,</span>
+      <span class="n">state</span><span class="p">,</span>
+      <span class="n">TaskStatus</span><span class="o">::</span><span class="n">SOURCE_SLAVE</span><span class="p">,</span>
+      <span class="n">UUID</span><span class="o">::</span><span class="n">random</span><span class="p">(),</span>
+      <span class="n">message</span><span class="p">,</span>
+      <span class="n">reason</span><span class="p">,</span>
+      <span class="n">executor</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">),</span>
+      <span class="n">UPID</span><span class="p">());</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>其中，<code class="highlighter-rouge">protobuf::createStatusUpdate</code> 创建一个 <code class="highlighter-rouge">StatusUpdate</code> 消息，该消息描述一个 task 的状态，
+定义在 <code class="highlighter-rouge">src/messages/messages.proto</code> 中。</p>
+
+<p>拿到消息后，调用 <code class="highlighter-rouge">Slave::statusUpdate</code> 方法把消息发送出去，最终会发给 master 。
+具体的发送机制参考
+<a href="2016-12-08-06-messages_between_master_and_slave.md">Mesos 源码学习(6) Master 和 Slave 之间的消息</a>。</p>
+
+<p><code class="highlighter-rouge">removeExecutor</code> 负责把一个 Executor 从 Slave 中移除。主要逻辑就是做一些检查，进行垃圾回收，
+做 checkpoint ，最后把 executor 的数据结构从 Slave 中去除。</p>
+
+<p><code class="highlighter-rouge">removeFramework</code> 负责把一个 Framework 从 Slave 中移除。主要逻辑类似：做一些检查，进行垃圾回收，
+处理 framework 的数据结构。</p>
+
+<h3 id="recover-为-reconnect-时重新和-executor-联系上">recover 为 reconnect 时，重新和 Executor 联系上</h3>
+
+<p>在 recovery 的这一步，需要和 executor 再次联系上，于是会向 Executor 发送 <code class="highlighter-rouge">ReconnectExecutorMessage</code>
+消息。</p>
+
+<h3 id="recover-不为-reconnect-时关闭-executor">recover 不为 reconnect 时，关闭 Executor</h3>
+
+<p>这是调用 <code class="highlighter-rouge">_shutdownExecutor</code> 把这个 executor 关闭。它做的事情就是向 Executor 发送一个
+<code class="highlighter-rouge">ShutdownExecutorMessage</code> 消息，然后等待一个 <code class="highlighter-rouge">executor_shutdown_grace_period</code> 时间，如果 executor
+还活着的话就把它 destroy 掉，最终执行 destroy 的是 <code class="highlighter-rouge">Containerizer-&gt;destroy</code> 方法，它会 kill 掉这个
+容器所有的进程，释放所有的资源。</p>
+
+<h3 id="清理没有及时重新注册的-executor">清理没有及时重新注册的 Executor</h3>
+
+<p>这里会先等待一段时间 <code class="highlighter-rouge">EXECUTOR_REREGISTER_TIMEOUT</code> ，这个时间写死为2s，然后调用
+<code class="highlighter-rouge">Slave::reregisterExecutorTimeout</code> 清理所有没有重新注册的 executor 。</p>
+
+<p>在之前的 recover 过程中，所有 executor 的状态都是默认的 <code class="highlighter-rouge">REGISTERING</code>，所以这里会遍历所有的
+Executor ，如果他们的状态仍然还是 <code class="highlighter-rouge">REGISTERING</code>，那就说明他们没有及时注册。
+对于这些 Executor，会有如下操作：</p>
+<ol>
+  <li>调用 <code class="highlighter-rouge">Containerizer-&gt;destroy</code> 方法把它终结掉。</li>
+  <li>executor 状态置为 <code class="highlighter-rouge">Executor::TERMINATING</code>，创建一个 <code class="highlighter-rouge">ContainerTermination</code> 结构，
+设置给 <code class="highlighter-rouge">executor-&gt;pendingTermination</code>。</li>
+</ol>
+
+<p>最后，会发一个消息，说 recovery 过程完成了：</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="c1">// Signal the end of recovery.
+</span>  <span class="n">recoveryInfo</span><span class="p">.</span><span class="n">recovered</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">Nothing</span><span class="p">());</span>
+</code></pre></div></div>
+
+<h2 id="调用-slave__recover">调用 <code class="highlighter-rouge">Slave::__recover</code></h2>
+
+<p>当 recover 完成时，会调用 <code class="highlighter-rouge">Slave::__recover</code> 方法，主要逻辑是：</p>
+<ol>
+  <li>找到之前的 slave 进程的目录，做垃圾回收；</li>
+  <li>如果启动参数 <code class="highlighter-rouge">--recover=cleanup</code>，则调用 libprocess 的 <code class="highlighter-rouge">terminate</code> 方法终结 slave process ；</li>
+  <li>如果启动参数 <code class="highlighter-rouge">--recover=reconnect</code>，则：
+    <ol>
+      <li>调用 <code class="highlighter-rouge">detector-&gt;detect()</code> 找到 leader master，找到后调用 <code class="highlighter-rouge">Slave::detected</code>，具体参考
+<a href="2016-12-08-06_messages_between_master_and_slave">Mesos 源码学习(6) Master 和 Slave 之间的消息</a>。</li>
+      <li>调用 <code class="highlighter-rouge">forwardOversubscribed()</code> 转发超发的资源，超发的资源从 ResourceEstimator 获取，经过一些
+计算后生成一个 <code class="highlighter-rouge">UpdateSlaveMessage</code> 消息发送给 master。</li>
+      <li>调用 <code class="highlighter-rouge">Slave::qosCorrections()</code> 来启动 QoS Controller。该方法会自己调用自己实现不断地做检查，
+它会调用 <code class="highlighter-rouge">qosController-&gt;corrections()</code> 的到一个 Correction 的列表，每个 Correction 表示对
+某个 Executor 所采取的动作，杀还是不杀，如果决定要杀, slave 就会把它杀掉。</li>
+    </ol>
+  </li>
+</ol>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="n">Slave</span><span class="o">::</span><span class="n">__recover</span><span class="p">(</span><span class="k">const</span> <span class="n">Future</span><span class="o">&lt;</span><span class="n">Nothing</span><span class="o">&gt;&amp;</span> <span class="n">future</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">...</span>
+  <span class="c1">// Schedule all old slave directories for garbage collection.
+</span>  <span class="k">const</span> <span class="n">string</span> <span class="n">directory</span> <span class="o">=</span> <span class="n">path</span><span class="o">::</span><span class="n">join</span><span class="p">(</span><span class="n">flags</span><span class="p">.</span><span class="n">work_dir</span><span class="p">,</span> <span class="s">"slaves"</span><span class="p">);</span>
+  <span class="n">Try</span><span class="o">&lt;</span><span class="n">list</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;&gt;</span> <span class="n">entries</span> <span class="o">=</span> <span class="n">os</span><span class="o">::</span><span class="n">ls</span><span class="p">(</span><span class="n">directory</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">entries</span><span class="p">.</span><span class="n">isSome</span><span class="p">())</span> <span class="p">{</span>
+    <span class="n">foreach</span> <span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">entry</span><span class="p">,</span> <span class="n">entries</span><span class="p">.</span><span class="n">get</span><span class="p">())</span> <span class="p">{</span>
+      <span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="o">::</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">entry</span><span class="p">);</span>
+      <span class="c1">// Ignore non-directory entries.
+</span>      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">os</span><span class="o">::</span><span class="n">stat</span><span class="o">::</span><span class="n">isdir</span><span class="p">(</span><span class="n">path</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">continue</span><span class="p">;</span>
+      <span class="p">}</span>
+
+      <span class="c1">// We garbage collect a directory if either the slave has not
+</span>      <span class="c1">// recovered its id (hence going to get a new id when it
+</span>      <span class="c1">// registers with the master) or if it is an old work directory.
+</span>      <span class="n">SlaveID</span> <span class="n">slaveId</span><span class="p">;</span>
+      <span class="n">slaveId</span><span class="p">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">entry</span><span class="p">);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">info</span><span class="p">.</span><span class="n">has_id</span><span class="p">()</span> <span class="o">||</span> <span class="o">!</span><span class="p">(</span><span class="n">slaveId</span> <span class="o">==</span> <span class="n">info</span><span class="p">.</span><span class="n">id</span><span class="p">()))</span> <span class="p">{</span>
+        <span class="c1">// GC the slave work directory.
+</span>        <span class="n">os</span><span class="o">::</span><span class="n">utime</span><span class="p">(</span><span class="n">path</span><span class="p">);</span> <span class="c1">// Update the modification time.
+</span>        <span class="n">garbageCollect</span><span class="p">(</span><span class="n">path</span><span class="p">);</span>
+
+        <span class="c1">// GC the slave meta directory.
+</span>        <span class="n">path</span> <span class="o">=</span> <span class="n">paths</span><span class="o">::</span><span class="n">getSlavePath</span><span class="p">(</span><span class="n">metaDir</span><span class="p">,</span> <span class="n">slaveId</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">os</span><span class="o">::</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">))</span> <span class="p">{</span>
+          <span class="n">os</span><span class="o">::</span><span class="n">utime</span><span class="p">(</span><span class="n">path</span><span class="p">);</span> <span class="c1">// Update the modification time.
+</span>          <span class="n">garbageCollect</span><span class="p">(</span><span class="n">path</span><span class="p">);</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="p">...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">flags</span><span class="p">.</span><span class="n">recover</span> <span class="o">==</span> <span class="s">"reconnect"</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">DISCONNECTED</span><span class="p">;</span>
+
+    <span class="c1">// Start detecting masters.
+</span>    <span class="n">detection</span> <span class="o">=</span> <span class="n">detector</span><span class="o">-&gt;</span><span class="n">detect</span><span class="p">()</span>
+      <span class="p">.</span><span class="n">onAny</span><span class="p">(</span><span class="n">defer</span><span class="p">(</span><span class="n">self</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">Slave</span><span class="o">::</span><span class="n">detected</span><span class="p">,</span> <span class="n">lambda</span><span class="o">::</span><span class="n">_1</span><span class="p">));</span>
+
+    <span class="c1">// Forward oversubscribed resources.
+</span>    <span class="n">forwardOversubscribed</span><span class="p">();</span>
+
+    <span class="c1">// Start acting on correction from QoS Controller.
+</span>    <span class="n">qosCorrections</span><span class="p">();</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="c1">// Slave started in cleanup mode.
+</span>    <span class="n">CHECK_EQ</span><span class="p">(</span><span class="s">"cleanup"</span><span class="p">,</span> <span class="n">flags</span><span class="p">.</span><span class="n">recover</span><span class="p">);</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">TERMINATING</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">frameworks</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+      <span class="n">terminate</span><span class="p">(</span><span class="n">self</span><span class="p">());</span>
+    <span class="p">}</span>
+
+    <span class="c1">// If there are active executors/frameworks, the slave will
+</span>    <span class="c1">// shutdown when all the executors are terminated. Note that
+</span>    <span class="c1">// the executors are guaranteed to terminate because they
+</span>    <span class="c1">// are sent shutdown signal in '_recover()' which results in
+</span>    <span class="c1">// 'Containerizer::destroy()' being called if the termination
+</span>    <span class="c1">// doesn't happen within a timeout.
+</span>  <span class="p">}</span>
+
+  <span class="n">recoveryInfo</span><span class="p">.</span><span class="n">recovered</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="n">Nothing</span><span class="p">());</span> <span class="c1">// Signal recovery.
+</span><span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="slave-recovery-结束">Slave Recovery 结束</h2>
+
+<p>到此，Slave Recovery 的过程结束。
+正常的逻辑下（<code class="highlighter-rouge">--recover=reconnect</code>），Slave 开始和 Master 进行通信。</p>
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

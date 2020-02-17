@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>内核中双向链表的实现</title>
+  <meta name="description" content="内核中双向链表的实现">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/04/21/kenel_list.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">内核中双向链表的实现</h1>
+    <p class="post-meta"><time datetime="2013-04-21T10:00:00+08:00" itemprop="datePublished">Apr 21, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="内核中双向链表的实现">内核中双向链表的实现</h1>
+
+<h2 id="list_head数据结构">list_head数据结构</h2>
+
+<p>为了理解内核中双向链表的实现，我们先来了解一下list_head数据结构：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* &lt;linux/types.h&gt; */
+struct list_head {
+    struct list_head *next, *prev;
+};
+</code></pre></div></div>
+
+<p>一个双向链表的元素包含一个类型为<code class="highlighter-rouge">list_head</code>的变量，<code class="highlighter-rouge">list_head</code>结构里面，<code class="highlighter-rouge">next</code>和<code class="highlighter-rouge">prev</code>分别表示通用双向列表向前和向后的指针元素。需要注意的是，入下图所示，<code class="highlighter-rouge">next</code>和<code class="highlighter-rouge">prev</code>所指向的是另一个<code class="highlighter-rouge">list_head</code>结构的地址，而非这个链表元素的地址。（要得到这个链表元素的地址，可以用<code class="highlighter-rouge">list_entry()</code>宏来得到，具体见下面）</p>
+
+<p><img src="img/kernel_list_head.png" alt="`list_head`和链表结构图" /></p>
+
+<p>对包含了<code class="highlighter-rouge">list_head</code>的双向列表，有以下的处理函数和宏：</p>
+
+<ul>
+  <li>
+    <p><code class="highlighter-rouge">LIST_HEAD(name)</code></p>
+
+    <p>初始化一个名字叫做name的链表头</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">list_add(n, p)</code></p>
+
+    <p>把n指向的元素插入p指向的元素之后</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">list_add_tail(n, p)</code></p>
+
+    <p>把n指向的元素插入p指向的元素之前</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">list_del(p)</code></p>
+
+    <p>删除p所指向的元素</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">list_empty(p)</code></p>
+
+    <p>检查p指向的链表是否为空</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">list_entry(p, t, m)</code></p>
+
+    <p>返回类型为t的数据结构的地址，其中类型t中含有list_head字段，且list_head字段的地址为p，名字为m。也就是在链表中找到一个元素，这个元素的类型为t，这个元素里面包含了类型为list_head的名称为m的属性。</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">list_for_each(p, h)</code></p>
+
+    <p>对表头地址<code class="highlighter-rouge">h</code>指定的链表进行扫描，在每次循环时，通过<code class="highlighter-rouge">p</code>返回指向链表元素的<code class="highlighter-rouge">list_head</code>结构的指针。</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">list_for_each_entry(p, h, m)</code></p>
+
+    <p>与<code class="highlighter-rouge">list_for_each</code>类似，只是返回的是链表元素的指针，也就是返回包含了地址为<code class="highlighter-rouge">p</code>且名称为<code class="highlighter-rouge">m</code>的<code class="highlighter-rouge">list_head</code>的元素的指针，而不是<code class="highlighter-rouge">list_head</code>结构本身的地址。</p>
+  </li>
+</ul>
+
+<h2 id="list_entry宏的实现"><code class="highlighter-rouge">list_entry宏</code>的实现</h2>
+
+<p>作为一个例子，我们来看看<code class="highlighter-rouge">list_entry</code>宏是怎么实现的。下面的叙述中SRC表示Linux内核源码所在的目录。</p>
+
+<p>在SRC/include/linux/list.h中有如下宏:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/**
+ * list_entry - get the struct for this entry
+ * @ptr:    the &amp;struct list_head pointer.
+ * @type:   the type of the struct this is embedded in.
+ * @member: the name of the list_struct within the struct.
+ */
+#define list_entry(ptr, type, member) \
+    container_of(ptr, type, member)
+</code></pre></div></div>
+
+<p>这个<code class="highlighter-rouge">container_of</code>宏则在SRC/drivers/staging/rtl8192e/rtllib.h中定义:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#ifndef container_of
+/**
+ * container_of - cast a member of a structure out to the containing structure
+ *
+ * @ptr:    the pointer to the member.
+ * @type:       the type of the container struct this is embedded in.
+ * @member:     the name of the member within the struct.
+ *
+ */
+#define container_of(ptr, type, member) ({            \
+    const typeof(((type *)0)-&gt;member)*__mptr = (ptr);    \
+    (type *)((char *)__mptr - offsetof(type, member)); })
+#endif
+</code></pre></div></div>
+
+<p>看起来很有意思，我们仔细分析一下上面的这一段宏。</p>
+
+<ul>
+  <li>
+    <p><code class="highlighter-rouge">((type *)0)</code></p>
+
+    <p>把0强制转换为type类型的指针，它指向一个空的type类型</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">((type *)0)-&gt;member)*__mptr = (ptr)</code></p>
+
+    <p>从上面得到的空的type类型得到类型中名称为member的一项，把ptr强制转换为member的类型的指针，赋值给变量__mptr</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">offsetof(type, member)</code></p>
+
+    <p>这个宏得到的是在类型type的内存结构中，名称为member的一个属性相对预type的基地址的偏移量。这个宏的具体实现下面讲。</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">(type *)((char *)__mptr - offsetof(type, member))</code></p>
+
+    <p>把之前赋值好的__mptr强制转换为char指针类型，这样可以和offsetof得到的偏移值做减法，由member的地址减去member相对于type的偏移值，得到的就是type的地址了。最后再把这个地址转换为type类型的指针。这样我们就得到了”container”的指针。</p>
+  </li>
+</ul>
+
+<h2 id="offsetof宏的实现"><code class="highlighter-rouge">offsetof</code>宏的实现</h2>
+
+<p><code class="highlighter-rouge">offsetof</code>的宏定义在SRC/include/linux/stddef.h中:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#undef offsetof
+#ifdef __compiler_offsetof
+#define offsetof(TYPE,MEMBER) __compiler_offsetof(TYPE,MEMBER)
+#else
+#define offsetof(TYPE, MEMBER) ((size_t) &amp;((TYPE *)0)-&gt;MEMBER)
+#endif
+</code></pre></div></div>
+
+<p>还是同样的方法，把0强制转换为TYPE类型的指针，找到这个指针代表的TYPE元素的MEMBER属性，得到它的地址，由于是由0强制转换而来，所以这个地址就是MEMBER属性相对与TYPE结构在内存中的偏移地址。再把这个偏移地址转换为<code class="highlighter-rouge">size_t</code>类型。所谓<code class="highlighter-rouge">size_t</code>类型，也就是用<code class="highlighter-rouge">sizeof</code>函数返回值的类型，也就是用<code class="highlighter-rouge">char</code>来衡量的一个数据结构的大小的值。</p>
+
+<p>事实上这里还涉及到<strong>字节对齐</strong>的问题。比如说</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>struct S1
+{
+    char c;
+    int i;
+};
+S1 s1;
+</code></pre></div></div>
+
+<p>我们可能会想，<code class="highlighter-rouge">char</code>占1字节，<code class="highlighter-rouge">int</code>占4字节，那么<code class="highlighter-rouge">sizeof(s1)</code>等于5字节么？不是的，事实上<code class="highlighter-rouge">sizeof(s1)</code>等于8字节。这就是所谓的“<strong>字节对齐</strong>”，之所以要字节对齐是因为这样有助于加快计算机的取数速度。编译器默认会让宽度为2的基本数据类型（<code class="highlighter-rouge">short</code>等）都位于能被2整除的地址上，让宽度为4的基本数据类型（<code class="highlighter-rouge">int</code>等）都位于等被4整除的地址上，以此类推。这样，两个数中间就可能需要加入填充字节。 字节对齐的细节和编译器实现相关，但一般而言，满足三个准则：</p>
+
+<ul>
+  <li>结构体变量的首地址能够被其最宽基本类型成员的大小所整除；</li>
+  <li>结构体每个成员相对于结构体首地址的偏移量（offset）都是成员大小的整数倍，如有需要编译器会在成员之间加上填充字节（internal adding）；</li>
+  <li>结构体的总大小为结构体最宽基本类型成员大小的整数倍，如有需要编译器会在最末一个成员之后加上填充字节（trailing padding）。</li>
+</ul>
+
+<p>上面说到的基本类型是指前面提到的像char、short、int、float、double这样的内置数据类型，这里所说的“数据宽度”就是指其sizeof的大小。由于结构体的成员可以是复合类型，比如另外一个结构体，所以在寻找最宽基本类型成员时，应当包括复合类型成员的子成员，而不是把复合成员看成是一个整体。但在确定复合类型成员的偏移位置时则是将复合类型作为整体看待。比如有:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>struct S3
+{
+    char c1;
+    S1 s;
+    char c2
+};
+</code></pre></div></div>
+
+<p>S1的最宽简单成员的类型为int，S3在考虑最宽简单类型成员时是将S1“打散”看的，所以S3的最宽简单类型为int，这样，通过S3定义的变量，其存储空间首地址需要被4整除，整个<code class="highlighter-rouge">sizeof(S3)</code>的值也应该被4整除。</p>
+
+<p>JH, 2013-04-21</p>
+
+<hr />
+<p>参考资料：</p>
+
+<ul>
+  <li>《深入理解Linux内核》</li>
+  <li><a href="http://www.ibm.com/developerworks/cn/linux/kernel/l-chain/index.html">深入分析 Linux 内核链表</a></li>
+  <li><a href="http://stillive.bokee.com/3430695.html">sizeof zz</a></li>
+</ul>
+
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>
