@@ -177,7 +177,7 @@ LRU/n。
 中的一个例子：程序叫 render ，它打开文件 scene.dat，读取512字节的数据，这些数据
 会存放在它的虚拟内存空间中的Heap段。
 
-![](img/readFromPageCache.png)
+![](/assets/readFromPageCache.png)
 
 图中带标号的表示物理内存中的一个页，根据`address_space`结构的分析我们知道，通过
 文件和偏移（以页为单位），如果已经缓存的话，可以在page cache中找到这页内容。
@@ -186,7 +186,7 @@ LRU/n。
 拷贝到用户空间的匿名VAM即Heap，可以看到，经过一次`read()`调用，这部分内容事实
 上在物理内存中存了两份：
 
-![](img/nonMappedFileRead.png)
+![](/assets/nonMappedFileRead.png)
 
 
 # The Thing King

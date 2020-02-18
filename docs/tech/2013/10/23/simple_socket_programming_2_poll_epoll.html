@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>最简单的 socket 套接字编程(2) -- poll() 和 epoll()</title>
+  <meta name="description" content="最简单的 socket 套接字编程(2) – poll() 和 epoll()">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/10/23/simple_socket_programming_2_poll_epoll.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">最简单的 socket 套接字编程(2) -- poll() 和 epoll()</h1>
+    <p class="post-meta"><time datetime="2013-10-23T14:30:00+08:00" itemprop="datePublished">Oct 23, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="最简单的-socket-套接字编程2--poll-和-epoll">最简单的 socket 套接字编程(2) – poll() 和 epoll()</h1>
+
+<p>本文主要介绍了使用<code class="highlighter-rouge">poll()</code>和<code class="highlighter-rouge">epoll()</code>在UNIX环境下socket网络编程的主要步骤，实现
+了一个简单的 服务器和客户端代码实例，实现了一个网络服务，该服务接受一个字符串的命令，执行该命
+令，并且把结 果返回给客户端。</p>
+
+<p>关于socket网络编程的基本概念以及多进程、多线程的网络服务器的原理和实例，参考
+<a href="simple_socket_programming.html">最简单的socket套接字编程</a>。</p>
+
+<p>关于<code class="highlighter-rouge">poll()</code>和<code class="highlighter-rouge">epoll()</code>的介绍和用法，参考
+<a href="understanding_linux_step_by_step_IO_2_advanced.html">一步步理解Linux之IO（2）–高级IO</a></p>
+
+<h1 id="client">Client</h1>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;string.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;arpa/inet.h&gt;
+#include &lt;netdb.h&gt;
+
+#define BUFLEN 256
+
+void error(const char *msg)
+{
+    perror(msg);
+    exit(0);
+}
+
+int main(int argc, char *argv[])
+{
+    int sockfd, portno, n;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+
+    char buffer[BUFLEN];
+    if (argc &lt; 3) {
+       fprintf(stderr,"usage %s hostname port\n", argv[0]);
+       exit(0);
+    }
+    portno = atoi(argv[2]);
+
+    if ((server = gethostbyname(argv[1])) == NULL) {
+        fprintf(stderr,"ERROR, no such host\n");
+        exit(0);
+    }
+    bzero((char *) &amp;serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server-&gt;h_addr,
+          (char *)&amp;serv_addr.sin_addr.s_addr,
+          server-&gt;h_length);
+    serv_addr.sin_port = htons(portno);
+
+    while (1) {
+        if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) &lt; 0)
+            error("ERROR opening socket");
+
+        if (connect(sockfd,(struct sockaddr *) &amp;serv_addr,sizeof(serv_addr)) &lt; 0)
+            error("ERROR connecting");
+        printf("&gt;&gt;&gt; ");
+        bzero(buffer, BUFLEN);
+        fgets(buffer, BUFLEN, stdin);
+        if((n = send(sockfd, buffer, strlen(buffer), 0)) &lt;= 0)
+             error("ERROR writing to socket");
+        bzero(buffer, BUFLEN);
+        while ((n = recv(sockfd, buffer, BUFLEN, 0)) &gt; 0) {
+            printf("%s",buffer);
+        }
+    }
+    return 0;
+}
+</code></pre></div></div>
+
+<h1 id="poll实现的server">poll()实现的server</h1>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* A simple server to run system commands use poll */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;signal.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;poll.h&gt;
+#include &lt;fcntl.h&gt;
+
+#define PORTNO 4444
+#define BACKLOG 10
+#define BUFLEN 256
+#define MAXCONN 100
+#define TRUE 1
+#define FALSE 0
+
+void error(const char *msg) {
+    perror(msg);
+}
+
+/*
+ * function really do the service
+ * run cmd geted from client and return the output to client
+ */
+void serve(struct pollfd *pfd) {
+    int n;
+    char buffer[BUFLEN];
+    FILE *fp;
+
+    bzero(buffer, BUFLEN);
+    printf("in serve ,fd=%d\n", pfd-&gt;fd);
+    if (pfd-&gt;revents &amp; POLLIN) {                /* read */
+        if ((n = read(pfd-&gt;fd, buffer, BUFLEN)) &lt; 0)
+            printf("ERROR reading from socket : %d", n);
+        printf("CMD : %s\n",buffer);
+        if ((fp = popen(buffer, "r")) == NULL)
+            error("ERROR when popen");
+        while (fgets(buffer, BUFLEN, fp) != NULL) {
+            if (send(pfd-&gt;fd, buffer, BUFLEN, 0) == -1)
+                error("send ERROR");
+        }
+        printf("serve end, closing %d\n", pfd-&gt;fd);
+        close(pfd-&gt;fd);
+        pfd-&gt;fd = -1;
+        pclose(fp);
+    }
+}
+
+/*
+ * Init listen socket and bind it to addr, return the listen socket
+ */
+int init_server() {
+    int sockfd;
+    struct sockaddr_in serv_addr;
+
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) &lt; 0) {
+        error("ERROR opening socket");
+        exit(1);
+    }
+
+    bzero((char *) &amp;serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(PORTNO);
+
+    if (bind(sockfd, (struct sockaddr *) &amp;serv_addr, sizeof(serv_addr)) &lt; 0) {
+        error("ERROR on binding");
+        exit(1);
+    }
+
+    return sockfd;
+}
+
+/*
+ * set fd nonblocking, success return 0, fail return -1
+ */
+int setnonblocking(int fd) {
+    if (fd &gt; 0) {
+        int flags = fcntl(fd, F_GETFL, 0);
+        flags = flags|O_NONBLOCK;
+        if (fcntl(fd, F_SETFL, flags) == 0) {
+            printf("setnonblocking success!\n");
+            return 0;
+        }
+    }
+    return -1;
+}
+
+void printfd(struct pollfd array[], int n) {
+    int i;
+    printf("array = ");
+    for(i = 0; i &lt; n; i++)
+        printf("[%d]:%d ", i, array[i].fd);
+    printf("\n");
+}
+
+/*
+ * Use poll() to serve for every connection
+ */
+int main(int argc, char *argv[]) {
+    int endserver = FALSE;
+    int listen_sock, conn_sock, pos, i, j;
+    struct sockaddr_in cli_addr;
+    socklen_t clilen = sizeof(cli_addr);
+
+    /* INIT pollfd structures */
+    struct pollfd allfds[MAXCONN];
+    printf("sizeof(allfds)=%d\n", (int)sizeof(allfds));
+    memset(allfds, 0, sizeof(allfds));
+    int nfds = 0;    /* number of fds in allfds */
+    int currentsize; /* current size of allfds */
+    int poll_result;
+
+    /* init listen socket, bind, listen */
+    listen_sock = init_server();
+    setnonblocking(listen_sock);
+    listen(listen_sock, BACKLOG);
+
+    /* add listen_socket to allfds array */
+    allfds[0].fd = listen_sock;
+    allfds[0].events = POLLIN;
+    nfds++;
+
+
+    while (endserver == FALSE) {
+        printfd(allfds, nfds);
+        printf("nfds=%d\n", nfds);
+        /* wait for events on sockets, timeout = -1 means waite forever */
+        poll_result = poll(allfds, nfds, -1);
+        if (poll_result == -1) {
+            error("poll ERROR");
+            break;
+        } else if (poll_result == 0) {
+            printf("poll round timeout, enther another poll...\n");
+            continue;
+        }
+        /*******************************************************************/
+        /* One or more descriptors are readable                            */
+        /*******************************************************************/
+        currentsize = nfds;
+        printf("correntsize=%d\n", currentsize);
+        for (pos = 0; pos &lt; currentsize; pos++) {
+            if (allfds[pos].revents &amp; POLLIN &amp;&amp;
+                    allfds[pos].fd == listen_sock) {  /* listen socket */
+                printf("event on listen sock\n");
+                /* Accept all incomming connections */
+                do {
+                    printf("listen_sock=%d\n", listen_sock);
+                    conn_sock = accept(listen_sock,
+                                   (struct sockaddr *)&amp;cli_addr, &amp;clilen);
+                    if (conn_sock &lt; 0)
+                        continue;
+                    setnonblocking(conn_sock);
+                    if (nfds &gt;= MAXCONN) {
+                        error("nfds &gt;= MAXCONN");
+                        break;
+                    }
+                    allfds[nfds].fd = conn_sock;
+                    allfds[nfds].events = POLLIN;
+                    nfds++;
+                } while(conn_sock != -1);
+
+            /* regular socket */
+            } else {
+                serve(&amp;allfds[pos]);
+            }
+
+            /* comparess allfds, delete the items which fd = -1 */
+            for (i = 0; i &lt; nfds; i++) {
+                if (allfds[i].fd == -1) {
+                    for (j = i; j &lt; nfds; j++) {
+                        allfds[j] = allfds[j+1];
+                    }
+                    nfds--;
+                    i--;
+                }
+            }
+        }
+
+    }
+
+    /* end server */
+    for (i = 0; i &lt; nfds; i++) {
+        if (allfds[i].fd &gt;= 0)
+            close(allfds[i].fd);
+    }
+
+    return 0;
+
+}
+</code></pre></div></div>
+
+<h1 id="epoll实现的server">epoll()实现的server</h1>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/* A simple server to run system commands use poll */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;signal.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;sys/epoll.h&gt;
+#include &lt;fcntl.h&gt;
+
+#define PORTNO 4444
+#define BACKLOG 10
+#define BUFLEN 256
+#define MAXCONN 100
+#define TRUE 1
+#define FALSE 0
+
+void error(const char *msg) {
+    perror(msg);
+}
+
+/*
+ * function really do the service
+ * run cmd geted from client and return the output to client
+ */
+void serve(int fd) {
+    int n;
+    char buffer[BUFLEN];
+    FILE *fp;
+
+    bzero(buffer, BUFLEN);
+    printf("in serve ,fd=%d\n", fd);
+    if ((n = read(fd, buffer, BUFLEN)) &lt; 0)
+        printf("ERROR reading from socket : %d", n);
+    printf("CMD : %s\n",buffer);
+    if ((fp = popen(buffer, "r")) == NULL)
+        error("ERROR when popen");
+    while (fgets(buffer, BUFLEN, fp) != NULL) {
+        if (send(fd, buffer, BUFLEN, 0) == -1)
+            error("send ERROR");
+    }
+    printf("serve end, closing %d\n", fd);
+    pclose(fp);
+}
+
+/*
+ * Init listen socket and bind it to addr, return the listen socket
+ */
+int init_server() {
+    int sockfd;
+    struct sockaddr_in serv_addr;
+
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) &lt; 0) {
+        error("ERROR opening socket");
+        exit(1);
+    }
+
+    bzero((char *) &amp;serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(PORTNO);
+
+    if (bind(sockfd, (struct sockaddr *) &amp;serv_addr, sizeof(serv_addr)) &lt; 0) {
+        error("ERROR on binding");
+        exit(1);
+    }
+
+    return sockfd;
+}
+
+/*
+ * set fd nonblocking, success return 0, fail return -1
+ */
+int setnonblocking(int fd) {
+    if (fd &gt; 0) {
+        int flags = fcntl(fd, F_GETFL, 0);
+        flags = flags|O_NONBLOCK;
+        if (fcntl(fd, F_SETFL, flags) == 0) {
+            printf("setnonblocking success!\n");
+            return 0;
+        }
+    }
+    return -1;
+}
+
+
+/*
+ * Use poll() to serve for every connection
+ */
+int main(int argc, char *argv[]) {
+    int endserver = FALSE;
+    int listen_sock, conn_sock, n;
+    struct sockaddr_in cli_addr;
+    socklen_t clilen = sizeof(cli_addr);
+
+    /* INIT pollfd structures */
+    struct epoll_event ev, events[MAXCONN];
+    int nfds;
+    int epollfd = epoll_create(10);
+    if (epollfd == -1) {
+        printf("epoll_create error\n");
+        exit(1);
+    }
+
+    /* init listen socket, bind, listen */
+    listen_sock = init_server();
+    setnonblocking(listen_sock);
+    listen(listen_sock, BACKLOG);
+
+    /* register listen_sock to epollfd */
+    ev.events = EPOLLIN;
+    ev.data.fd = listen_sock;
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sock, &amp;ev) == -1) {
+        printf("ERROR: epoll_ctl\n");
+        exit(1);
+    }
+
+    while (endserver == FALSE) {
+        nfds = epoll_wait(epollfd, events, MAXCONN, -1);
+        if (nfds == -1) {
+            printf("epoll_wait ERROR\n");
+            exit(1);
+        }
+
+        for (n = 0; n &lt; nfds; n++) {
+            if (events[n].data.fd == listen_sock) { /* listen socket */
+                do {
+                    printf("listen_sock=%d\n", listen_sock);
+                    conn_sock = accept(listen_sock,
+                                   (struct sockaddr *)&amp;cli_addr, &amp;clilen);
+                    if (conn_sock &lt; 0)
+                        continue;
+                    setnonblocking(conn_sock);
+                    ev.events = EPOLLIN|EPOLLET;
+                    ev.data.fd = conn_sock;
+                    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &amp;ev)
+                            == -1) {
+                        printf("epoll_ctl for conn_sock ERROR\n");
+                        exit(1);
+                    }
+                } while(conn_sock != -1);
+            } else { /* regular connection */
+                serve(events[n].data.fd);
+                ev.events = EPOLLIN|EPOLLET;
+                ev.data.fd = conn_sock;
+                if (epoll_ctl(epollfd, EPOLL_CTL_DEL, events[n].data.fd, &amp;ev)
+                        == -1) {
+                    printf("epoll_ctl DEL ERROR\n");
+                    exit(1);
+                }
+                close(events[n].data.fd);
+            }
+        }
+    }
+
+    return 0;
+}
+</code></pre></div></div>
+
+<hr />
+
+<p>参考资料：</p>
+
+<ul>
+  <li>《UNIX环境高级编程》</li>
+  <li><a href="http://pic.dhe.ibm.com/infocenter/iseries/v6r1m0/index.jsp?topic=/rzab6/poll.htm">Using poll() instead of select()</a></li>
+  <li>Man pages</li>
+</ul>
+
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

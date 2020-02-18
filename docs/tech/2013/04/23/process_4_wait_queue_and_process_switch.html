@@ -10,8 +10,8 @@
   <meta name="description" content="Linux 等待队列和进程切换">
 
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="canonical" href="http://localhost:4000/tech/2013/04/23/process_4_wait_queue_and_process_switch.html">
-  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/04/23/process_4_wait_queue_and_process_switch.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
 </head>
 
 
@@ -207,7 +207,7 @@ struct __wait_queue {
 
 <p>整个等待队列的结构如下图所示：</p>
 
-<p><img src="img/wait_queue.png" alt="wait_queue" /></p>
+<p><img src="/assets/wait_queue.png" alt="wait_queue" /></p>
 
 <h4 id="等待队列操作的实现">等待队列操作的实现</h4>
 
@@ -357,7 +357,7 @@ prev=A，next=B，这样我们就找不到C了，而找到C在进程调度的过
 
 <h3 id="进程切换示例图">进程切换示例图：</h3>
 
-<p><img src="img/process_switch.png" alt="process_switch" /></p>
+<p><img src="/assets/process_switch.png" alt="process_switch" /></p>
 
 <p>具体的切换由一系列的各种寄存器的值的切换组成，在此我们不做深入研究。</p>
 

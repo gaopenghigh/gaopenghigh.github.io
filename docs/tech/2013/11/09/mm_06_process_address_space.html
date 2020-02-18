@@ -10,8 +10,8 @@
   <meta name="description" content="Linux 内存管理(6): 进程地址空间的管理">
 
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="canonical" href="http://localhost:4000/tech/2013/11/09/mm_06_process_address_space.html">
-  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/11/09/mm_06_process_address_space.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
 </head>
 
 
@@ -88,7 +88,7 @@ kmalloc或者vmalloc以字节为单位获取连续的或不连续的内存。由
 进程地址空间有关的全部信息，包括计数器、包含的内存区域、页全局目录、各个段的地
 址等等。</p>
 
-<p><img src="img/mm_struct.png" alt="" /></p>
+<p><img src="/assets/mm_struct.png" alt="" /></p>
 
 <p>在进程的<code class="highlighter-rouge">task_struct</code>中的<code class="highlighter-rouge">mm</code>域就指向<code class="highlighter-rouge">mm_struct</code>结构，结构体中需要重点关注的字
 段如下：</p>
@@ -210,7 +210,7 @@ kmalloc或者vmalloc以字节为单位获取连续的或不连续的内存。由
 
 <p>进程所拥有的VMA从来不重叠，并且内核尽力把新分配的VMA与紧邻的现有VMA进行合并：</p>
 
-<p><img src="img/add_or_delete_vma.png" alt="" /></p>
+<p><img src="/assets/add_or_delete_vma.png" alt="" /></p>
 
 <h2 id="mm_struct-和-vm_area_struct-的组织">mm_struct 和 vm_area_struct 的组织</h2>
 
@@ -226,7 +226,7 @@ O(log(n))。</p>
 
 <p><code class="highlighter-rouge">task_struct</code>，<code class="highlighter-rouge">mm_struct</code>和<code class="highlighter-rouge">vm_area_struct</code>的组织实例如下图：</p>
 
-<p><img src="img/memoryDescriptorAndMemoryAreas.png" alt="" /></p>
+<p><img src="/assets/memoryDescriptorAndMemoryAreas.png" alt="" /></p>
 
 <h2 id="vma的工作方式一个例子">VMA的工作方式+一个例子</h2>
 
@@ -239,7 +239,7 @@ VMA中的页没有指向一个有效的页表项(PTE)，这就会引发一个<st
 
 <p>一个例子。</p>
 
-<p><img src="img/heapAllocation.png" alt="" /></p>
+<p><img src="/assets/heapAllocation.png" alt="" /></p>
 
 <ol>
   <li>进程通过<code class="highlighter-rouge">brk()</code>系统调用申请一块内存，这块内存应该在heap的VMA上。</li>
@@ -279,11 +279,11 @@ VMA中的页没有指向一个有效的页表项(PTE)，这就会引发一个<st
 
 <p>缺页异常处理程序的总体方案如下图：</p>
 
-<p><img src="img/page_fault_policy.gif" alt="" /></p>
+<p><img src="/assets/page_fault_policy.gif" alt="" /></p>
 
 <p>具体的处理流程大致如下：</p>
 
-<p><img src="img/page_fault_policy_detail.gif" alt="" /></p>
+<p><img src="/assets/page_fault_policy_detail.gif" alt="" /></p>
 
 <h3 id="vma的操作">VMA的操作</h3>
 

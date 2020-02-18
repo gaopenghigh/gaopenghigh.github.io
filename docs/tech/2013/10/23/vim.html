@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>我的轻度定制 vim</title>
+  <meta name="description" content="我的轻度定制 vim">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/10/23/vim.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">我的轻度定制 vim</h1>
+    <p class="post-meta"><time datetime="2013-10-23T14:30:00+08:00" itemprop="datePublished">Oct 23, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="我的轻度定制-vim">我的轻度定制 vim</h1>
+
+<p>vim的学习曲线又陡又长，但它的功能和可定制性实在太强大，一个熟练的用户加上一个高
+度定制化的vim能够达到很高的效率，在加上熟练地运用vim的各种高级功能是很酷的一件
+事，于是我决定近期内不再尝试其它的编辑器，逐步地打造适合自己的vim。下面记录的，
+都是我自己觉得很有用的，或者是容易忘记的，这篇文章的内容也会是逐步丰富的。</p>
+
+<h3 id="技巧们">技巧们：</h3>
+
+<h4 id="快捷键">快捷键</h4>
+<ul>
+  <li><code class="highlighter-rouge">gd</code>跳到变量声明的地方</li>
+  <li><code class="highlighter-rouge">&lt;Ctrl&gt; + ]</code>跳到定义的地方，需要ctags事先生成tag文件</li>
+  <li><code class="highlighter-rouge">&lt;Ctrl&gt; + o</code>返回之前的位置</li>
+  <li><code class="highlighter-rouge">5 + &lt;Ctrl&gt; + ^</code>跳到第5号buffer</li>
+  <li><code class="highlighter-rouge">&lt;Ctrl&gt; + PgUp/PgDn</code>在tab间跳</li>
+  <li><code class="highlighter-rouge">:ls</code>列出buffer</li>
+  <li><code class="highlighter-rouge">&lt;Ctrl&gt; + g</code>显示当前编辑文件中当前光标所在行位置以及文件状态信息</li>
+  <li><code class="highlighter-rouge">:r FILENAME</code>向当前文件中插入另外的文件的内容</li>
+  <li><code class="highlighter-rouge">:1,10 w</code> outfile Saves lines 1 to 10 in outfile</li>
+  <li><code class="highlighter-rouge">:1,10 w &gt;&gt; outfile</code> Appends lines 1 to 10 to outfile</li>
+  <li><code class="highlighter-rouge">:r infile</code> Insert the content of infile</li>
+  <li><code class="highlighter-rouge">:23r infile</code> Insert the content of infile under line 23</li>
+  <li><code class="highlighter-rouge">J</code>把两行连起来</li>
+  <li><code class="highlighter-rouge">f/F</code>单字符查找命令，”fx” 命令向前查找本行中的字符 x。”F” 命令则用于向左查找</li>
+  <li><code class="highlighter-rouge">tx</code>命令与<code class="highlighter-rouge">fx</code>相似，但它只把光标移动到目标字符的前一个字符上。</li>
+  <li><code class="highlighter-rouge">H,M,L</code>分别代表移到当前视野的Home, Middle, Last处</li>
+  <li><code class="highlighter-rouge">:qall</code>全部退出</li>
+  <li><code class="highlighter-rouge">:wqall</code>全部保存退出</li>
+  <li><code class="highlighter-rouge">20|</code>move cursor to column 20.</li>
+  <li><code class="highlighter-rouge">[[</code>Jump to function start</li>
+  <li><code class="highlighter-rouge">[{</code>Jump to block start</li>
+  <li><code class="highlighter-rouge">:%s/ *$//g</code> Delete all white spaces</li>
+  <li><code class="highlighter-rouge">:g/string/d</code> 删除所有包含string的行</li>
+  <li><code class="highlighter-rouge">Ctrl+a</code> Increment number under the cursor</li>
+  <li><code class="highlighter-rouge">Ctrl+x</code> Decrement number under cursor</li>
+  <li><code class="highlighter-rouge">u</code>和<code class="highlighter-rouge">U</code>，在选中之后，”U”和”u”分别把选中的部分大写或小写</li>
+  <li>对文本进行简单排序：用<code class="highlighter-rouge">shift v</code>选中多行文本，输入 <code class="highlighter-rouge">: !sort</code></li>
+  <li>在 Vim 中统计文本行数和当前光标的位置，可以使用 <code class="highlighter-rouge">ctrl + g</code>，统计字节数，可以使用 <code class="highlighter-rouge">g + ctrl + g</code></li>
+</ul>
+
+<h4 id="vim中的替换">vim中的替换:</h4>
+
+<p><code class="highlighter-rouge">%</code>表示全文匹配:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">s/old/new/g</code>当前行中所有old替换成new</li>
+  <li><code class="highlighter-rouge">:%s/old/new/</code>表示将全文中old替换成new，但每行只替换第一个单词</li>
+  <li><code class="highlighter-rouge">:%s/old/new/g</code>表示将全文中所有出现过的old替换成new (所有都替换)</li>
+  <li><code class="highlighter-rouge">%s/old/new/gc</code>全文替换, 替换前询问</li>
+</ul>
+
+<p><code class="highlighter-rouge">d</code>表示删除：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">g/china/d</code></li>
+  <li><code class="highlighter-rouge">:g/string/d</code> 删除所有包含<code class="highlighter-rouge">string</code>的行</li>
+  <li><code class="highlighter-rouge">:v/string/d</code> 删除所有不包含<code class="highlighter-rouge">string</code>的行</li>
+</ul>
+
+<p>我的vimrc如下：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>" 我的轻度定制VIM
+" JH Gao &lt;gaopenghigh@gmail.com&gt;
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" =&gt; 全局设置
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+set nocompatible      " 不与vi的兼容
+set autoread          " 文件修改之后自动载入
+set showcmd           " 状态栏显示命令
+set showmatch         " 展示匹配
+set linebreak         " 整词换行
+set smartcase         " 搜索时不区分大小写,除非只有搜索关键字中出现一个大字母
+set incsearch         " 输入字符串就显示匹配点
+set autowrite         " 自动把内容写回文件
+runtime! debian.vim   " 运行时环境
+let g:mapleader = ',' " mapleader键设置，通过mapleader键可以完成更多的快捷键
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" =&gt; 显示和格式
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+syntax on
+set background=dark
+set hlsearch          " 搜索高亮
+set nu                " 显示行号
+set title             " 在终端的title bar上显示信息
+set laststatus=2      " 总是显示状态栏
+set ruler             " 显示标尺
+set tabstop=4         " Tab宽度
+set shiftwidth=4      " 自动缩进的宽度
+set expandtab         " 输入:re可以把tab替换为空格
+set autoindent        " 自动缩进
+set smartindent       " 基于autoindent的一些改进
+set wrap              " Wrap lines
+
+" 配色方案
+colorscheme molokai
+let g:molokai_original = 1
+let g:rehash256 = 1
+
+" Python 的关键字设置
+let python_highlight_all = 1
+au FileType python syn keyword pythonDecorator True None False self
+
+" 删除末尾的空格
+func! DeleteTrailingWS()
+  exe "normal mz"
+  %s/\s\+$//ge
+  exe "normal `z"
+endfunc
+autocmd BufWrite *.py,*.t2t,*.sh,*.md,*.markdown :call DeleteTrailingWS()
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" =&gt; 在tabs和windows之间移动
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" 按&lt;F2&gt;在新tab中编辑文件, 注意下一行末尾是有个空格的:)
+nnoremap &lt;F2&gt; :tabedit
+
+" 按 ,&lt;Tab&gt; 和 ,` 移动到下一个/上一个tab
+set switchbuf=usetab
+nnoremap &lt;leader&gt;&lt;Tab&gt; :sbnext&lt;CR&gt;
+nnoremap &lt;leader&gt;` :sbprevious&lt;CR&gt;
+
+" 按 ,1 ,2 ,3等跳到相应的tab
+map &lt;leader&gt;1 1gt
+map &lt;leader&gt;2 2gt
+map &lt;leader&gt;3 3gt
+map &lt;leader&gt;4 4gt
+map &lt;leader&gt;5 5gt
+map &lt;leader&gt;6 6gt
+map &lt;leader&gt;7 7gt
+map &lt;leader&gt;8 8gt
+map &lt;leader&gt;9 9gt
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" =&gt; 插件设置
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" 用vundle来管理插件
+filetype off " required!
+set rtp+=~/.vim/vundle.git/
+call vundle#rc()
+
+" 安装的插件
+Bundle 'gmarik/vundle'
+Bundle 'genutils'
+Bundle 'taglist.vim'
+Bundle 'TaskList.vim'
+Bundle 'django.vim'
+Bundle 'jQuery'
+Bundle 'a-new-txt2tags-syntax'
+Bundle 'python.vim'
+Bundle 'Syntastic'
+Bundle 'L9'
+Bundle 'FuzzyFinder'
+Bundle 'vim-powerline'
+Bundle 'c.vim'
+Bundle 'Pydiction'
+Bundle 'ctrlp.vim'
+Bundle 'Tabular'
+Bundle 'The-NERD-Commenter'
+
+filetype plugin indent on
+
+" 插件Syntastic
+" 可以设置使用什么来做语法检查
+" 对于python默认使用pyflask进行检查，也可以通过如下的设置使用pylint进行检查
+" let g:syntastic_python_checker = 'pylint'
+" let g:syntastic_python_checker_args = '--rcfile /etc/pylint.conf -d C0301'
+" let g:syntastic_quiet_warnings=1
+
+" 插件Pydiction
+" 编辑python文件时可以通过Tab进行自动补全
+let g:pydiction_location = '~/.vim/bundle/Pydiction/complete-dict'
+
+" 插件Tabular
+" 自动对齐=,:等两边的内容
+map &lt;leader&gt;= :Tabularize /=&lt;CR&gt;:Tabularize /:&lt;CR&gt;
+
+" 插件NERDTree（这个插件没法用vundle安装）
+let NERDTreeShowBookmarks = 1
+" 按F3打开或关闭文件导航窗口
+map &lt;silent&gt; &lt;F3&gt; :NERDTreeToggle&lt;cr&gt;
+
+" 插件FuzzyFinder，快速查找文件、类和函数等
+map &lt;leader&gt;f :FufTaggedFile&lt;CR&gt;
+map &lt;leader&gt;F :FufFile&lt;CR&gt;
+map &lt;leader&gt;g :FufTag&lt;CR&gt;
+map &lt;leader&gt;b :FufBuffer&lt;CR&gt;
+
+" 插件CtrlP
+" 这是一个更好用的文件查找插件，按F5开启查找模式
+map &lt;F5&gt; :CtrlP&lt;CR&gt;
+
+" 对于txt2tags文件，要设置对filetype
+au BufNewFile,BufRead *.t2t set ft=txt2tags
+
+" ctags 和 taglist
+" 按下F4重新生成tag文件，并更新taglist
+map &lt;F4&gt; :!/usr/bin/ctags-exuberant -R --c++-kinds=+p --fields=+iaS --extra=+q .&lt;CR&gt;&lt;CR&gt;
+            \:TlistUpdate&lt;CR&gt;
+set tags=tags
+set tags+=./tags                    " 添加当前目录的tags文件查询
+let Tlist_Ctags_Cmd = '/usr/bin/ctags-exuberant'
+let Tlist_Show_One_File = 1         " 不同时显示多个文件的tag，只显示当前文件的
+let Tlist_Exit_OnlyWindow = 1       " 如果taglist窗口是最后一个窗口，则退出vim
+let Tlist_Show_One_File=0           " 让taglist可以同时展示多个文件的函数列表
+let Tlist_File_Fold_Auto_Close=1    " 非当前文件，函数列表折叠隐藏
+let Tlist_Use_Right_Window = 1      " 在右侧窗口中显示taglist窗口
+let Tlist_Process_File_Always = 1   " taglist始终解析文件中的tag，
+"                                     不管taglist窗口有没有打开
+" 用 F9 来打开/关闭taglist页面
+map &lt;silent&gt; &lt;F9&gt; :TlistToggle&lt;cr&gt;
+
+" 插件python.vim
+" 对python代码快速操作, 快捷键:
+"   ]t      -- Jump to beginning of block
+"   ]e      -- Jump to end of block
+"   ]v      -- Select (Visual Line Mode) block
+"   ]&lt;      -- Shift block to left
+"   ]&gt;      -- Shift block to right
+"   ]#      -- Comment selection
+"   ]u      -- Uncomment selection
+"   ]c      -- Select current/previous class
+"   ]d      -- Select current/previous function
+"   ]&lt;up&gt;   -- Jump to previous line with the same/lower indentation
+"   ]&lt;down&gt; -- Jump to next line with the same/lower indentation
+
+" 插件TaskList.vim
+" 显示标注了TODO的信息
+" 默认快捷键&lt;leader&gt;t打开TODO的list window
+
+" 插件powerline
+" 增强型的状态栏插件
+"set guifont=PowerlineSymbols\ for\ Powerline
+set t_Co=256
+let g:Powerline_symbols = 'unicode'
+
+
+"""""""""""""""""""""""""""""""""""""""""""""
+" =&gt; 自定义功能
+"""""""""""""""""""""""""""""""""""""""""""""
+
+" 自动运行这个文件(python, bash, lua, perl)
+" 写python或shell时经常需要做单元测试, 按下&lt;F12&gt;就用相应的解释器运行这个文件
+map &lt;F10&gt; :call AutoRun(input('argv : '))&lt;cr&gt;
+
+func AutoRun(par)
+    let par = a:par
+    exec "w"
+    if &amp;filetype == 'sh'
+        let cmd = "!bash % ".par
+    elseif &amp;filetype == 'python'
+        let cmd = "!python % ".par
+    elseif &amp;filetype == 'ruby'
+        let cmd = "!ruby % ".par
+    elseif &amp;filetype == 'perl'
+        let cmd = "!perl % ".par
+    elseif &amp;filetype == 'lua'
+        let cmd = "!lua % ".par
+    " chromium-browser 中安装了Markdown Preview扩展的话，可以直接打开
+    " markdown文件预览
+    elseif &amp;filetype == 'markdown'
+        let cmd = "!/usr/bin/chromium-browser % ".par
+    endif
+    exec cmd
+endfunc
+
+
+" 自动添加一些常用信息
+
+autocmd BufNewFile *.sh,*.pl,*.py exec ":call SetTitle()"
+
+func SetTitle()
+    if &amp;filetype == 'sh'
+        call setline(1, "\#!/bin/sh")
+        call append(line("."), "\#****************************************************************#")
+        call append(line(".")+1, "\# ScriptName: ".expand("%") )
+        call append(line(".")+2, "\# Author: gaopenghigh&lt;gaopenghigh@gmail.com&gt;")
+        call append(line(".")+3, "\# Create Date: ".strftime("%F %R"))
+        call append(line(".")+4, "\# Function: " )
+        call append(line(".")+5, "\#***************************************************************#")
+        call append(line(".")+6, "")
+        :8
+    elseif &amp;filetype == 'perl'
+        call setline(1, "\#!/usr/bin/perl")
+        call append(line("."), "\#****************************************************************#")
+        call append(line(".")+1, "\# ScriptName: ".expand("%") )
+        call append(line(".")+2, "\# Author: gaopenghigh&lt;gaopenghigh@gmail.com&gt;")
+        call append(line(".")+3, "\# Create Date: ".strftime("%F %R"))
+        call append(line(".")+4, "\# Function: ")
+        call append(line(".")+5, "\#***************************************************************#")
+        call append(line(".")+6, "")
+        :8
+    elseif &amp;filetype == 'ruby'
+        call setline(1, "\#!/usr/bin/ruby")
+        call append(line("."), "\#****************************************************************#")
+        call append(line(".")+1, "\# ScriptName: ".expand("%") )
+        call append(line(".")+2, "\# Author: gaopenghigh&lt;gaopenghigh@gmail.com&gt;")
+        call append(line(".")+3, "\# Create Date: ".strftime("%F %R"))
+        call append(line(".")+4, "\# Function: ")
+        call append(line(".")+5, "\#***************************************************************#")
+        call append(line(".")+6, "")
+        :8
+    elseif &amp;filetype == 'python'
+        call setline(1, "\#!/usr/bin/python")
+        call append(line("."), "\# -*- coding: utf-8 -*-")
+        call append(line(".")+1, "\#****************************************************************#")
+        call append(line(".")+2, "\# ScriptName: ".expand("%") )
+        call append(line(".")+3, "\# Author: gaopenghigh&lt;gaopenghigh@gmail.com&gt;")
+        call append(line(".")+4, "\# Create Date: ".strftime("%F %R"))
+        call append(line(".")+5, "\# Function: ")
+        call append(line(".")+6, "\#***************************************************************#")
+        call append(line(".")+7, "")
+        :8
+    endif
+endfunc
+
+" 列数为80的地方高
+" 由于有可能会和插件冲突，所以这一部分放在最后亮显示
+if exists('+colorcolumn')
+    set colorcolumn=80
+else
+    au BufWinEnter * let w:m2=matchadd('ErrorMsg', '\%&gt;80v.\+', -1)
+endif
+hi ColorColumn guibg=#2d2d2d ctermbg=246
+</code></pre></div></div>
+
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

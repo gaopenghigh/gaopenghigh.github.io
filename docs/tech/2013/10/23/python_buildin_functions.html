@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Python 内建函数和函数式编程</title>
+  <meta name="description" content="Python 内建函数和函数式编程">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/10/23/python_buildin_functions.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Python 内建函数和函数式编程</h1>
+    <p class="post-meta"><time datetime="2013-10-23T14:30:00+08:00" itemprop="datePublished">Oct 23, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="python-内建函数和函数式编程">Python 内建函数和函数式编程</h1>
+
+<p>关于Python内建函数的学习笔记。</p>
+
+<p><strong>关键字：</strong>
+Python内建函数，函数式编程，Functional Programming</p>
+
+<h3 id="iter">iter()</h3>
+
+<p>把一切可以变成iterator的对象对变成iterator.</p>
+
+<h3 id="dict">dict()</h3>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&gt;&gt;&gt; L = [('Italy', 'Rome'), ('France', 'Paris'), ('US', 'Washington DC')]
+&gt;&gt;&gt; dict(L)
+{'Italy': 'Rome', 'US': 'Washington DC', 'France': 'Paris'}
+</code></pre></div></div>
+
+<h3 id="generator和yield">Generator和yield</h3>
+
+<p>一个递归的generator，实现中根次序遍历树：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>def inorder(t):
+    if t:
+        for x in inorder(t.left):
+            yield x
+        yield t.label
+        for x in inorder(t.right):
+            yield x
+</code></pre></div></div>
+
+<p>Generator的状态还可以中途被改变，通过<code class="highlighter-rouge">send()</code>方法对generator传值，而在generator
+中通过<code class="highlighter-rouge">val = (yield i)</code>方法获得这个值，然后根据需要做一些变化：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>def counter (maximum):
+    i = 0
+    while i &lt; maximum:
+        val = (yield i)
+        # If value provided, change counter
+        if val is not None:
+            i = val
+        else:
+            i += 1
+
+&gt;&gt;&gt; it = counter(10)
+&gt;&gt;&gt; print it.next()
+0
+&gt;&gt;&gt; print it.next()
+1
+&gt;&gt;&gt; print it.send(8)
+8
+&gt;&gt;&gt; print it.next()
+9
+&gt;&gt;&gt; print it.next()
+Traceback (most recent call last):
+File "t.py", line 15, in ?
+    print it.next()
+StopIteration
+</code></pre></div></div>
+
+<h3 id="map">map()</h3>
+
+<p><code class="highlighter-rouge">map(f, iterA, iterB, ...)</code> 返回一个列表，该列表内容是：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>f(iterA[0], iterB[0]), f(iterA[1], iterB[1]), f(iterA[2], iterB[2]), ....
+</code></pre></div></div>
+
+<h3 id="filter">filter()</h3>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&gt;&gt;&gt; def is_even(x):
+...     return (x % 2) == 0
+
+&gt;&gt;&gt;&gt;&gt;&gt; filter(is_even, range(10))
+[0, 2, 4, 6, 8]
+
+&gt;&gt;&gt; [x for x in range(10) if is_even(x)]
+[0, 2, 4, 6, 8]
+
+existing_files = filter(os.path.exists, file_list)
+</code></pre></div></div>
+
+<h3 id="reduce">reduce()</h3>
+
+<p><code class="highlighter-rouge">reduce(func, iter, [initial_value])</code>返回对一个iterator不断地执行<code class="highlighter-rouge">func()</code>操作后
+最终的结果。比如iter是<code class="highlighter-rouge">[1, 2, 3]</code>，则</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>reduce(func, iter) 返回 func(func(1, 2), 3)
+reduce(func, iter, 4) 返回 func(func(func(4, 1), 2), 3)
+total = reduce(lambda a, b: (0, a[1] + b[1]), items)[1]
+</code></pre></div></div>
+
+<h3 id="enumerate">enumerate()</h3>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&gt;&gt;&gt; for i in enumerate(['subject', 'verb', 'object']):
+...     print(i)
+...
+(0, 'subject')
+(1, 'verb')
+(2, 'object')
+</code></pre></div></div>
+
+<h3 id="any和all">any()和all()</h3>
+
+<ul>
+  <li>any(iter)，当iter中有一个元素为真时返回True，相当于很多个<code class="highlighter-rouge">or</code>。</li>
+  <li>all(iter)，当iter中所有元素都为真时返回True，相当于很多个<code class="highlighter-rouge">and</code>。</li>
+</ul>
+
+<h3 id="itertools模块">itertools模块</h3>
+
+<p>itertools模块包含一些常用的功能：</p>
+
+<h4 id="itertoolscountn">itertools.count(n)</h4>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>itertools.count() =&gt; 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, ...
+itertools.count(10) =&gt; 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, ...
+</code></pre></div></div>
+
+<h4 id="itertoolscycleiter">itertools.cycle(iter)</h4>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>itertools.cycle([1,2,3,4,5]) =&gt; 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, ...
+</code></pre></div></div>
+
+<h4 id="itertoolsrepeatelem-n">itertools.repeat(elem, [n])</h4>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>itertools.repeat('abc') =&gt; abc, abc, abc, abc, abc, abc, abc, ...
+itertools.repeat('abc', 5) =&gt; abc, abc, abc, abc, abc
+</code></pre></div></div>
+
+<h4 id="itertoolschainitera-iterb-">itertools.chain(iterA, iterB, …)</h4>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>itertools.chain(['a', 'b', 'c'], (1, 2, 3)) =&gt; a, b, c, 1, 2, 3
+</code></pre></div></div>
+
+<h4 id="itertoolsizipitera-iterb-">itertools.izip(iterA, iterB, …)</h4>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>itertools.izip(['a', 'b', 'c'], (1, 2, 3)) =&gt; ('a', 1), ('b', 2), ('c', 3)
+</code></pre></div></div>
+
+<p>内建函数zip()也做类似的事，但izip()和zip()不同的是，izip()不会在内存中构造出整
+个要返回的列表，而是在需要的时候才去构造一个tuple。</p>
+
+<p>####　itertools.islice(iter, [start], stop, [step])</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>itertools.islice(range(10), 2, 8, 2) =&gt; 2, 4, 6
+</code></pre></div></div>
+
+<h4 id="itertoolsimapf-itera-iterb-">itertools.imap(f, iterA, iterB, …)</h4>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>itertools.imap(f, iterA, iterB, ...) =&gt;
+f(iterA[0], iterB[0]), f(iterA[1], iterB[1]), f(iterA[2], iterB[2]), ...
+</code></pre></div></div>
+
+<h4 id="itertoolsstarmapfunc-iter">itertools.starmap(func, iter)</h4>
+
+<p>startmap用于iterable的东西会返回一个个tuple，而func使用这些tuple作为参数。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>itertools.starmap(os.path.join,
+                  [('/usr', 'bin', 'java'), ('/bin', 'python'),
+                   ('/usr', 'bin', 'perl'),('/usr', 'bin', 'ruby')])
+=&gt;
+/usr/bin/java, /bin/python, /usr/bin/perl, /usr/bin/ruby
+</code></pre></div></div>
+
+<h4 id="itertoolsifilterpredicate-iter">itertools.ifilter(predicate, iter)</h4>
+
+<p>类似于filter，不过是iterator。另外还有一个相反的</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>itertools.ifilterfalse(predicate, iter)
+</code></pre></div></div>
+
+<h4 id="itertoolstakewhilepredicate-iter">itertools.takewhile(predicate, iter)</h4>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>def less_than_10(x):
+    return (x &lt; 10)
+
+itertools.takewhile(less_than_10, itertools.count()) =&gt;
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+</code></pre></div></div>
+
+<h4 id="itertoolsdropwhilepredicate-iter">itertools.dropwhile(predicate, iter)</h4>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>itertools.dropwhile(less_than_10, itertools.count()) =&gt;
+    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, ...
+</code></pre></div></div>
+
+<h4 id="itertoolsgroupbyiter-key_funcnone">itertools.groupby(iter, key_func=None)</h4>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>city_list = [('Decatur', 'AL'), ('Huntsville', 'AL'), ('Selma', 'AL'),
+             ('Anchorage', 'AK'), ('Nome', 'AK'),
+             ('Flagstaff', 'AZ'), ('Phoenix', 'AZ'), ('Tucson', 'AZ'),
+             ...
+            ]
+
+def get_state ((city, state)):
+    return state
+
+itertools.groupby(city_list, get_state) =&gt;
+  ('AL', iterator-1),
+  ('AK', iterator-2),
+  ('AZ', iterator-3), ...
+
+where
+iterator-1 =&gt;
+  ('Decatur', 'AL'), ('Huntsville', 'AL'), ('Selma', 'AL')
+iterator-2 =&gt;
+  ('Anchorage', 'AK'), ('Nome', 'AK')
+iterator-3 =&gt;
+  ('Flagstaff', 'AZ'), ('Phoenix', 'AZ'), ('Tucson', 'AZ')
+</code></pre></div></div>
+
+<hr />
+
+<p>参考资料：</p>
+<ul>
+  <li><a href="http://docs.python.org/2/howto/functional.html">Functional Programming HOWTO</a></li>
+</ul>
+
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

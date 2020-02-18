@@ -16,7 +16,7 @@ TODO
 
 感谢[Gustavo Duarte](http://duartes.org/gustavo/blog/)，画了下面的双核结构图：
 
-![](img/physicalMemoryAccess.png)
+![](/assets/physicalMemoryAccess.png)
 
 CPU通过 前端总线，即Front Side Bus(FSB)连接到北桥芯片（Northbridge），再连接到
 内存模块。上图列出了主要的3组针脚：“Address Pins”，“Data Pins”和“Request Pins”
@@ -33,7 +33,7 @@ CPU通过 前端总线，即Front Side Bus(FSB)连接到北桥芯片（Northbrid
 
 第一个包通过 address pins 和 request pins 输出，其内容如下：
 
-![](img/fsbRequestPhasePacketA.png)
+![](/assets/fsbRequestPhasePacketA.png)
 
 通过 request pins 输出的内容则代表了不同的request类型。
 
@@ -42,7 +42,7 @@ CPU通过 前端总线，即Front Side Bus(FSB)连接到北桥芯片（Northbrid
 
 第一个包发送后，第二个包在接下来的时钟周期内发送。第二个包的数据如下：
 
-![](img/fsbRequestPhasePacketB.png)
+![](/assets/fsbRequestPhasePacketB.png)
 
 通过部分 address pins 输出的 attribute signals 代表了Intel处理器中5种不同的缓存
 方式：
@@ -64,7 +64,7 @@ CPU通过 前端总线，即Front Side Bus(FSB)连接到北桥芯片（Northbrid
 
 下图中的例子代表了需要从内存获取一份数据的过程：
 
-![](img/memoryRead.png)
+![](/assets/memoryRead.png)
 
 在Intel架构中，一部分内存区域被映射到一些设备，比如网卡，于是驱动程序对这些设备
 的操作，就是通过对这部分内存区域的读写完成。内核在页表（page tables）中把这部分

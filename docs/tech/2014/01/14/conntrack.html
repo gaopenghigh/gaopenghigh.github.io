@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>ip_conntrack 错误处理及原理</title>
+  <meta name="description" content="ip_conntrack 错误处理及原理">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2014/01/14/conntrack.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">ip_conntrack 错误处理及原理</h1>
+    <p class="post-meta"><time datetime="2014-01-14T14:30:00+08:00" itemprop="datePublished">Jan 14, 2014</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="ip_conntrack-错误处理及原理">ip_conntrack 错误处理及原理</h1>
+
+<h2 id="ip_conntrack-table-full-dropping-packet">ip_conntrack: table full, dropping packet</h2>
+
+<p>服务器上出现了这样的错误(/var/log/messages):</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ip_conntrack: table full, dropping packet.
+</code></pre></div></div>
+
+<p>查了一些资料，原因是使用了iptables，服务器的连接数太大，内核的
+<strong>Connection Tracking System(conntrack)</strong>没有足够的空间来存放连接的信息，解决
+方法就是增大这个空间。</p>
+
+<ol>
+  <li>
+    <p>查看当前大小：</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> $ sysctl net.ipv4.netfilter.ip_conntrack_max
+ net.ipv4.netfilter.ip_conntrack_max = 65535
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>增大空间，/etc/sysctl.conf修改或新增下面内容：</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> net.ipv4.netfilter.ip_conntrack_max = 655350
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>生效：</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> $ sysctl -p
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<p>那么，什么是<strong>Connection Tracking System(conntrack)</strong>，它是如何工作的，和
+iptables的关系是什么，为了弄清这些问题，我又查了一些资料，整理如下。</p>
+
+<h2 id="netfilter">Netfilter</h2>
+
+<blockquote>
+  <p>Netfilter is a set of hooks inside the Linux kernel that allows kernel
+modules to register callback functions with the network stack. A registered
+callback function is then called back for every packet that traverses the
+respective hook within the network stack.<a href="http://www.netfilter.org/">1</a></p>
+</blockquote>
+
+<p>简单地说，<strong>Netfilter Framework</strong>通过在 Linux network protocol stack 上的一系列
+hooks，提供了一种机制，使得内核模块可以在 network stack 中注册一些回调函数，每
+个网络包的传输都会经过这些回调函数。</p>
+
+<p>而iptables是基于Netfilter Framework上的一套工具，运行于用户态，用于配制网络包的
+过滤规则。由于iptables的chains和hooks和Netfilter Framework有同样的名字，但
+iptables只是在Netfilter Framework上的一个工具而已。</p>
+
+<h3 id="the-hooks-and-callback-function">The Hooks and Callback Function</h3>
+
+<p>Netfilter在Linux network stack中插入了5个hooks，实现了在不同的阶段对包进行处理
+。</p>
+
+<ul>
+  <li><strong>PREROUTING</strong>: 所有的包都会进过这个hook，在路由之前进行。DNAT等
+就是在这一层实现。</li>
+  <li><strong>LOCAL INPUT</strong>: 所有要进入本机的包都经过这个hook.</li>
+  <li><strong>FORWARD</strong>: 不进入本机的包经过这个hook.</li>
+  <li><strong>LOCAL OUTPUT</strong>: 离开本机的包经过这个hook.</li>
+  <li><strong>POSTROUTING</strong>: 经过路由之后的包会经过这个hook，SNAT就在这一层实现。所有由
+本机发出的包都要经过这个hook.</li>
+</ul>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NF_IP_PRE_ROUTING              NF_IP_FORWARD       NF_IP_POST_ROUTING
+      [1]      ====&gt; ROUTER ====&gt;    [3]    =============&gt; [4]
+                       ||                        /\
+                       ||                        ||
+                       ||                      ROUTER
+                       \/                        ||
+                      [2] ===&gt; LOCAL PROCESS ===&gt;[5]
+                NF_IP_LOCAL_IN              NF_IP_LOCAL_OUT
+</code></pre></div></div>
+
+<p>可以在一个hook上注册callback函数，callback的返回下面的某个值：</p>
+
+<ul>
+  <li>ACCEPT</li>
+  <li>DROP</li>
+  <li>QUEUE: 通过<code class="highlighter-rouge">nf_queue</code>把包传到用户空间；</li>
+  <li>STOLEN: Silently holds the packet until something happens, so that it
+temporarily does not continue to travel through the stack. This is usually
+used to collect <strong>defragmented IP packets</strong>.也就是说暂停包的传输直到某个条
+件发生；</li>
+  <li>REPEAT: 强制这个包重新走一遍这个hook；</li>
+</ul>
+
+<p>总之就是，Netfilter Framework提供了一个框架，可以在包传输的不同阶段，通过回调
+函数的方式对包进行过滤。</p>
+
+<p>上面提到了”defragmented IP packets”，
+Wikipedia<a href="http://en.wikipedia.org/wiki/IP_fragmentation">解释</a>如下；</p>
+
+<blockquote>
+  <p>The Internet Protocol (IP) implements datagram fragmentation, breaking it
+into smaller pieces, so that packets may be formed that can pass through a
+link with a smaller maximum transmission unit (MTU) than the original
+datagram size.</p>
+</blockquote>
+
+<p>简单地说就是数据包的长度大于了MTU的大小，就会把数据包分片，装在多个较小的包里面
+传输出去。</p>
+
+<h3 id="the-connection-tracking-system-and-the-stateful-inspection">The Connection Tracking System and the Stateful inspection</h3>
+
+<p>Connection Tracking System, which is the module that provides stateful packet
+inspection for iptables.</p>
+
+<p>Basically, the connection tracking system stores information about the state
+of a connection in a memory structure that contains the source and destination
+IP addresses, port number pairs, protocol types, state, and timeout.
+With this extra information, we can define more intelligent filtering policies.
+Connection tracking system just tracks packets; it does not filter.
+(<a href="http://people.netfilter.org/pablo/docs/login.pdf">Netfilter’s connection tracking system</a>)</p>
+
+<h4 id="连接的状态">连接的状态</h4>
+
+<p>在conntrack系统中，一个连接可能有如下的状态：</p>
+
+<ul>
+  <li>NEW: 连接正在建立，比如对于TCP连接，收到了一个SYN包；</li>
+  <li>ESTABLISHED: 连接已经建立，可以看到“来往”的包；</li>
+  <li>RELATED: 关联的连接；</li>
+  <li>INVALID: 不合法的；</li>
+</ul>
+
+<p>所以，即使像是UDP这样无状态的协议，对于Connection Tracking System也是有状态的。</p>
+
+<h4 id="实现">实现</h4>
+
+<p>conntrack系统主要使用一个hash表来检索查询。表中的每一项，都是一个双链表。（
+Each bucket has a double-linked list of hash tuples.）一个连接有两个hash tuples
+，一个是“来”（包来自于建立连接的那一方）方向，一个是“回”方向。每个tuple都存了这
+个连接的相关信息，两个tuple的又组织在<code class="highlighter-rouge">nf_conn</code>结构中，该结构就代表了一个连接的
+状态。</p>
+
+<p><img src="/assets/pictures/conntrack_structure.png" alt="" /></p>
+
+<p>Hash表中hash值的计算是基于3层和4层的一些协议信息，同时引入了一个随机量防止攻击
+。conntrack表有一个最大容量，表充满时，就会选择一个最近使用时间最早的conntrack
+丢弃。</p>
+
+<p>回调函数<code class="highlighter-rouge">nf_conntrack_in</code>注册在PREROUTING hook上，它会检查包的合法性，并且在表
+中查询这个包是否属于哪个conntrack，如果没找到的话，一个新的conntrack就会被创建
+，并且其中<code class="highlighter-rouge">confirmed</code>标志没有被设置。在LOCAL INPUT和POSTROUTING上注册的
+<code class="highlighter-rouge">nf_conntrack_cofirm</code>函数，会把一个conntrack的<code class="highlighter-rouge">confirmed</code>标志设置上。对于进入本
+机或者forward出去的包，这两个hook是包最后的经过的hook，如果这时包还没有被丢弃的
+话，就设置<code class="highlighter-rouge">confirmed</code>位并且把新建的conntrack加入到hash表中。</p>
+
+<h5 id="helpers-and-expectation">Helpers and Expectation</h5>
+
+<p>一些应用层的协议不容易被追踪，比如FTP的passive mode，使用21端口做控制，另外又用
+一个随机端口获取数据。对于用户来说 这两个连接是联系在一起的(related)。</p>
+
+<p>Conntrack系统提供了一种叫做helper的机制，使得系统能够判断一个连接是否和已经存在
+的某个连接有关系。改机制定义了<strong>expectation</strong>的概念，一个expectation指在一个
+预期的时间段内出现的连接。那FTP来说，helper在返回的包中寻找数据传输端口的相关信
+息，找到的话，找到的话，一个expectation就被创建并被插入到expectation的链表中。</p>
+
+<p>当一个conntrack创建时，conntrack系统首先会寻找是否有匹配的expectation，没有的话
+就会对这个连接使用helper。如果找到匹配的expectation，新的conntrack就会和创建那
+个expectation的conntrack关联起来。</p>
+
+<p>JH, 2014-01-14</p>
+
+<hr />
+
+<p>参考资料：</p>
+
+<ol>
+  <li><a href="http://www.netfilter.org/">http://www.netfilter.org/</a></li>
+  <li><a href="http://people.netfilter.org/pablo/docs/login.pdf">Netfilter’s connection tracking system</a></li>
+</ol>
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

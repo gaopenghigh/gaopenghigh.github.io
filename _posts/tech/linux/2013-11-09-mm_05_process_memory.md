@@ -36,7 +36,7 @@ toc: true
 进程切换的过程中，内核空间不变，只不过使用的用户空间是各个进程自己的地址空间。
 如图：
 
-![](img/virtualMemoryInProcessSwitch.png)
+![](/assets/virtualMemoryInProcessSwitch.png)
 
 上图中，蓝色部分表示的虚拟内存已经映射到了物理内存中，白色部分没有映射。
 
@@ -47,7 +47,7 @@ Stack，Heap，Memory Mapping Segment，BSS Segment，Data Segment，Text Segmen
 
 如图：
 
-![](img/linuxFlexibleAddressSpaceLayout.png)
+![](/assets/linuxFlexibleAddressSpaceLayout.png)
 
 简单介绍如下：
 

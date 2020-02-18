@@ -10,8 +10,8 @@
   <meta name="description" content="Linux 内存管理(8): 内存映射">
 
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="canonical" href="http://localhost:4000/tech/2013/11/11/mm_08_mmap.html">
-  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/11/11/mm_08_mmap.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
 </head>
 
 
@@ -73,7 +73,7 @@
 
 <h3 id="内存映射">内存映射</h3>
 
-<p><img src="img/mappedFileRead.png" alt="" /></p>
+<p><img src="/assets/mappedFileRead.png" alt="" /></p>
 
 <p>当使用内存映射文件时，内核把程序的虚拟页直接map到page cache。但不是所有内容都
 马上从磁盘读取到物理内存中，而是通过 page fault ，在需要的时候才从磁盘读取。</p>
@@ -96,11 +96,11 @@
 <p>下图中的两个进程，reander有读写操作，3dreander只有读，他们都通过私有的方式映射
 了文件 scene.dat ：</p>
 
-<p><img src="img/copyOnWrite.png" alt="" /></p>
+<p><img src="/assets/copyOnWrite.png" alt="" /></p>
 
 <p>动态加载的库文件就是通过文件映射映射到进程空间的，一副“全景图”如下：</p>
 
-<p><img src="img/virtualToPhysicalMapping.png" alt="" /></p>
+<p><img src="/assets/virtualToPhysicalMapping.png" alt="" /></p>
 
 <h3 id="内存映射的数据结构">内存映射的数据结构</h3>
 
@@ -116,7 +116,7 @@
 
 <p>下图说明了这些数据结构是如何链接在一起的：</p>
 
-<p><img src="img/mmap_data_structure.png" alt="" /></p>
+<p><img src="/assets/mmap_data_structure.png" alt="" /></p>
 
 <p>图中，inode的<code class="highlighter-rouge">i_mapping</code>字段指向文件的<code class="highlighter-rouge">address_space</code>对象。每个<code class="highlighter-rouge">address_space</code>
 对象的<code class="highlighter-rouge">page_tree</code>字段又指向该地址空间的页的基树(page_tree)，另外<code class="highlighter-rouge">i_mmap</code>字段指

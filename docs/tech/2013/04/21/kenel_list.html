@@ -10,8 +10,8 @@
   <meta name="description" content="内核中双向链表的实现">
 
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="canonical" href="http://localhost:4000/tech/2013/04/21/kenel_list.html">
-  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/04/21/kenel_list.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
 </head>
 
 
@@ -76,7 +76,7 @@ struct list_head {
 
 <p>一个双向链表的元素包含一个类型为<code class="highlighter-rouge">list_head</code>的变量，<code class="highlighter-rouge">list_head</code>结构里面，<code class="highlighter-rouge">next</code>和<code class="highlighter-rouge">prev</code>分别表示通用双向列表向前和向后的指针元素。需要注意的是，入下图所示，<code class="highlighter-rouge">next</code>和<code class="highlighter-rouge">prev</code>所指向的是另一个<code class="highlighter-rouge">list_head</code>结构的地址，而非这个链表元素的地址。（要得到这个链表元素的地址，可以用<code class="highlighter-rouge">list_entry()</code>宏来得到，具体见下面）</p>
 
-<p><img src="img/kernel_list_head.png" alt="`list_head`和链表结构图" /></p>
+<p><img src="/assets/kernel_list_head.png" alt="`list_head`和链表结构图" /></p>
 
 <p>对包含了<code class="highlighter-rouge">list_head</code>的双向列表，有以下的处理函数和宏：</p>
 

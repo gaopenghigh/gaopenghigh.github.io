@@ -10,8 +10,8 @@
   <meta name="description" content="Linux 内存管理(1)：分段(segment)">
 
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="canonical" href="http://localhost:4000/tech/2013/11/06/mm_01_segment.html">
-  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/11/06/mm_01_segment.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
 </head>
 
 
@@ -89,7 +89,7 @@ Front Side Bus）连接到北桥（Northbridgh），再连接到内存条。在F
 <a href="http://duartes.org/gustavo/blog/post/memory-translation-and-segmentation">Memory Translation and Segmentation</a>
 ）：</p>
 
-<p><img src="img/memoryTranslation.png" alt="" /></p>
+<p><img src="/assets/memoryTranslation.png" alt="" /></p>
 
 <h3 id="硬件中的分段处理器怎么访问物理内存">硬件中的分段–处理器怎么访问物理内存</h3>
 
@@ -124,7 +124,7 @@ Segment selector代表了一个叫做“段描述符（segment descriptors)”�
 这个表实际上就是一个数组，每个元素有8个字节，每个元素（segment descriptor）表示
 一个段。Segment descriptor的结构如下图：</p>
 
-<p><img src="img/segmentDescriptor.png" alt="" /></p>
+<p><img src="/assets/segmentDescriptor.png" alt="" /></p>
 
 <p>其中，</p>
 
@@ -138,7 +138,7 @@ Segment selector代表了一个叫做“段描述符（segment descriptors)”�
 (Local Descriptor Table)。每个CPU核都有一个叫做<strong>gdtr</strong>的寄存器，里面放着GDT的
 地址。所以在16位的段寄存器中的内容（segment selector）就有如下的结构：</p>
 
-<p><img src="img/segmentSelectorDataAndCode.png" alt="" /></p>
+<p><img src="/assets/segmentSelectorDataAndCode.png" alt="" /></p>
 
 <p>其中，</p>
 <ul>
@@ -151,7 +151,7 @@ Segment selector代表了一个叫做“段描述符（segment descriptors)”�
 或者LDT表中找到对应的segment 的segment descriptor，获取到这个段的Base Address、
 大小等信息。如图:</p>
 
-<p><img src="img/segmentSelector_segmentDescriptor.png" alt="" /></p>
+<p><img src="/assets/segmentSelector_segmentDescriptor.png" alt="" /></p>
 
 <p>途中的“Noprogrammable Reigster”表示一组非编程寄存器，它存储segment selector指定
 的segment descriptor，这样不用每次都去查GDT，能够更快地进行逻辑地址到线性地址的
@@ -163,7 +163,7 @@ Segment selector代表了一个叫做“段描述符（segment descriptors)”�
 
 <p>整个过程可以通过下图表示：</p>
 
-<p><img src="img/logical_address_convert.jpg" alt="" /></p>
+<p><img src="/assets/logical_address_convert.jpg" alt="" /></p>
 
 <p>分段单元（segment unit）执行的过程如下：</p>
 
@@ -189,7 +189,7 @@ gdtr寄存器存储</li>
 
 <p>下面的图代表了一个用户态中的程序，发出一个JMP命令时发生的情况：</p>
 
-<p><img src="img/protectedModeSegmentation.png" alt="" /></p>
+<p><img src="/assets/protectedModeSegmentation.png" alt="" /></p>
 
 <p>Linux主要使用的就是4个段：用户态下的数据段和代码段，内核态下的数据段和代码段。
 运行过程中，每个CPU内核都有自己的GDT。所以主要有4个GDT：两个给内核态的
@@ -236,7 +236,7 @@ call等， 来进行设置。</li>
 <p>当一个段选择器（segment selector）加载到寄存器，或者当通过线性地址访问一页内存
 时，CPU都会对内存进行保护，其保护的原理如下图：</p>
 
-<p><img src="img/segmentProtection.png" alt="" /></p>
+<p><img src="/assets/segmentProtection.png" alt="" /></p>
 
 <p>MAX()选择RPL和CPL中最小的一个等级，把它和段描述符(segment descriptor)中的DPL进
 行比较，当大于DPL时（即当前的CPU的等级CPL或者需要的等级RPL小于这个段的等级时）

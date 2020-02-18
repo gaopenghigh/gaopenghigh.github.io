@@ -10,8 +10,8 @@
   <meta name="description" content="Linux 内存管理(7): 页高速缓存">
 
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="canonical" href="http://localhost:4000/tech/2013/11/10/mm_07_page_cache.html">
-  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/11/10/mm_07_page_cache.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
 </head>
 
 
@@ -244,7 +244,7 @@ add_to_page_cache_lru(page, mapping, index, GFP_KERNEL)
 中的一个例子：程序叫 render ，它打开文件 scene.dat，读取512字节的数据，这些数据
 会存放在它的虚拟内存空间中的Heap段。</p>
 
-<p><img src="img/readFromPageCache.png" alt="" /></p>
+<p><img src="/assets/readFromPageCache.png" alt="" /></p>
 
 <p>图中带标号的表示物理内存中的一个页，根据<code class="highlighter-rouge">address_space</code>结构的分析我们知道，通过
 文件和偏移（以页为单位），如果已经缓存的话，可以在page cache中找到这页内容。</p>
@@ -253,7 +253,7 @@ add_to_page_cache_lru(page, mapping, index, GFP_KERNEL)
 拷贝到用户空间的匿名VAM即Heap，可以看到，经过一次<code class="highlighter-rouge">read()</code>调用，这部分内容事实
 上在物理内存中存了两份：</p>
 
-<p><img src="img/nonMappedFileRead.png" alt="" /></p>
+<p><img src="/assets/nonMappedFileRead.png" alt="" /></p>
 
 <h1 id="the-thing-king">The Thing King</h1>
 

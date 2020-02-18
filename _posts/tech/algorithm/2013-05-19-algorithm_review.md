@@ -317,11 +317,11 @@ n个元素的序列 K = (k[0], k[1], ..., k[n-1])，满足：
 
 下面两个图能表达出两种树的意思。
 
-![B树](img/algorithm_review_tree_b_tree.png)
+![B树](/assets/algorithm_review_tree_b_tree.png)
 
 B树
 
-![B+树](img/algorithm_review_tree_b_plus_tree.jpg)
+![B+树](/assets/algorithm_review_tree_b_plus_tree.jpg)
 
 B+树
 

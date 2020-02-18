@@ -10,8 +10,8 @@
   <meta name="description" content="Linux 内存管理(2): 分页">
 
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="canonical" href="http://localhost:4000/tech/2013/11/07/mm_02_page.html">
-  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/11/07/mm_02_page.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
 </head>
 
 
@@ -77,14 +77,14 @@
 page frame作为物理内存管理的单位。32位系统下，page frame的大小为4K，和虚拟内存
 的page的大小一致。一个2G的物理地址空间结构示意图如下：</p>
 
-<p><img src="img/physicalAddressSpace.png" alt="" /></p>
+<p><img src="/assets/physicalAddressSpace.png" alt="" /></p>
 
 <p>同一块物理内存可以被map到不同的页上，并且有不同的标志。</p>
 
 <p>下图展示了一个进程的heap段中，虚拟内存空间（VMA）和物理内存页框(page frame)的关
 系：</p>
 
-<p><img src="img/heapMapped.png" alt="" /></p>
+<p><img src="/assets/heapMapped.png" alt="" /></p>
 
 <p>中间的这堆page表示了VMA的范围，一个页通过页表最终能找到物理内
 存中对应的页框。有些页没有箭头，这表示它的页表项（PTE）中的<code class="highlighter-rouge">P</code>标志位为0，
@@ -107,7 +107,7 @@ MMU（存储器管理单元）中的地址翻译硬件和一个存放在内存�
 <p>每个页在页表中都对应了一个<strong>页表项(page table entry, PTE)</strong>，一个32位
 系统的页表项如下图：</p>
 
-<p><img src="img/x86PageTableEntry4KB.png" alt="" /></p>
+<p><img src="/assets/x86PageTableEntry4KB.png" alt="" /></p>
 
 <p>内核可以读取或设置页表项的每一个标志，其中，</p>
 
@@ -138,7 +138,7 @@ PTE中的地址如果为空，表示这个页还没有分配，如果不为空�
   <li>物理页面的起始地址再加上VPO，就得到了这个虚拟地址对应的物理地址。</li>
 </ol>
 
-<p><img src="img/mm_02_page_page_hit.jpg" alt="" /></p>
+<p><img src="/assets/mm_02_page_page_hit.jpg" alt="" /></p>
 
 <p>注意，由于物理页面和虚拟页面大小相同，所以偏移也一样。</p>
 
@@ -154,7 +154,7 @@ PTE中的地址如果为空，表示这个页还没有分配，如果不为空�
   <li>缺页处理程序返回原来的进程，再次执行导致缺页的指令。这次就会命中。</li>
 </ol>
 
-<p><img src="img/mm_02_page_page_not_hit.jpg" alt="" /></p>
+<p><img src="/assets/mm_02_page_page_not_hit.jpg" alt="" /></p>
 
 <h3 id="使用高速缓存sram">使用高速缓存SRAM</h3>
 
@@ -162,7 +162,7 @@ PTE中的地址如果为空，表示这个页还没有分配，如果不为空�
 是物理地址，也就是说，地址翻译发生在高速缓存查找之前，SRAM中有对页表条目的缓存
 。</p>
 
-<p><img src="img/mm_02_page_page_and_sram.jpg" alt="" /></p>
+<p><img src="/assets/mm_02_page_page_and_sram.jpg" alt="" /></p>
 
 <h3 id="利用tlb加速地址翻译">利用TLB加速地址翻译</h3>
 
@@ -170,14 +170,14 @@ PTE中的地址如果为空，表示这个页还没有分配，如果不为空�
 <strong>翻译后备缓冲器(Translation Lookaside Buffer, TLB)</strong>，这是一个虚拟寻址的小缓存
 ，每一行都保存着一个由单个PTE组成的块。加上TLB后，地址翻译的示意图如下：</p>
 
-<p><img src="img/mm_02_page_page_and_tlb.jpg" alt="" /></p>
+<p><img src="/assets/mm_02_page_page_and_tlb.jpg" alt="" /></p>
 
 <h3 id="页表的组织">页表的组织</h3>
 
 <p>基于效率的考虑，处理器一般都采用多级目录的方式来组织页表。从2.6.11版本之后，
 Linux使用4级分页模型，如下图所示：</p>
 
-<p><img src="img/LinuxPagingModel.jpg" alt="" /></p>
+<p><img src="/assets/LinuxPagingModel.jpg" alt="" /></p>
 
 <hr />
 

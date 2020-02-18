@@ -165,7 +165,7 @@ VFS有四种主要的对象类型：
 
 Ext2文件系统在格式化时，分为多个区块群组（block group），每个区块群组都有独立的inode/block/superblock。
 
-![ext2](img/linux_file_ext2.png)
+![ext2](/assets/linux_file_ext2.png)
 
 上图中，区块对应表记录了哪些block被使用了哪些没有。同样inode对应表记录了哪些inode被使用了。
 
@@ -173,7 +173,7 @@ Ext2文件系统在格式化时，分为多个区块群组（block group），�
 
 inode的大小有限，那么如果一个文件很大时，怎么才能列出所有记录了该文件内容的block呢？Ext2中用了3层的间接记录区来实现这个功能。第一层间接纪录区记录了一个block，该block的内容不是文件的实际内容，二是更多的block的地址，这些block中存放的才是文件的实际内容。第二层间接纪录区记录了一个block，该block又记录了一堆的block，而这堆block们各自有记录了一堆的block，这些block中才是记录了文件内容。第三层间接纪录区的意义以此类推。下面的图来自于《鸟哥的Linux私房菜》：
 
-![ext2](img/linux_file_ext2_block.png)
+![ext2](/assets/linux_file_ext2_block.png)
 
 关于ext2文件系统，可以参考鸟哥的[《Linux磁碟與檔案系統管理》](http://linux.vbird.org/linux_basic/0230filesystem.php)
 

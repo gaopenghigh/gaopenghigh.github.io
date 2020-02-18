@@ -131,7 +131,7 @@ schedule函数是内核的进程调度函数，当它被调用是，内核会按
 
 整个等待队列的结构如下图所示：
 
-![wait_queue](img/wait_queue.png)
+![wait_queue](/assets/wait_queue.png)
 
 #### 等待队列操作的实现
 
@@ -266,7 +266,7 @@ prev=A，next=B，这样我们就找不到C了，而找到C在进程调度的过
 
 ### 进程切换示例图：
 
-![process_switch](img/process_switch.png)
+![process_switch](/assets/process_switch.png)
 
 具体的切换由一系列的各种寄存器的值的切换组成，在此我们不做深入研究。
 

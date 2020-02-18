@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>inotifyrsync -- 用inotify和rsync实现多机实时同步</title>
+  <meta name="description" content="用inotify和rsync实现多机实时同步">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/10/23/inotifyrsync.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">做美好的人，做酷的事</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">inotifyrsync -- 用inotify和rsync实现多机实时同步</h1>
+    <p class="post-meta"><time datetime="2013-10-23T14:30:00+08:00" itemprop="datePublished">Oct 23, 2013</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="用inotify和rsync实现多机实时同步">用inotify和rsync实现多机实时同步</h1>
+
+<p>对于热备的机器，需要实时把文件目录的修改从master同步到slave上。用crontab加rsync的方式能够实现几分种延迟内的同步，但用对于文件数目很大的情况，每次rsync都会有很多计算，比较耗费CPU资源。下面的脚本用inotify和rsync实现实时同步。为了保险起见，最好还是设置一个crontab来定时跑整个目录的rsync，不过定时间隔可以稍微长一点，以免占用太多系统资源。</p>
+
+<p><a href="https://github.com/gaopenghigh/inotifyrsync">github上的链接</a></p>
+
+<p>直接上代码：</p>
+
+<p><strong>README</strong></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Use rsync and inotify to sync files and directories from one host to other hosts
+
+Include 2 files:
+sync.sh
+do_sync.py
+
+RUN:
+0. Make sure source host can ssh into destination hosts without password
+1. Do some setting in file do_sync.py
+2. run sync.sh
+</code></pre></div></div>
+
+<p><strong>sync.sh</strong></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+
+<span class="nv">LOG</span><span class="o">=</span><span class="sb">`</span><span class="nb">cat</span> <span class="si">$(</span><span class="nb">dirname</span> <span class="nv">$0</span><span class="si">)</span>/do_sync.py | <span class="nb">grep</span> <span class="s2">"LOG_FILE = "</span> | <span class="nb">head</span> <span class="nt">-n</span> 1 | <span class="nb">awk</span> <span class="s1">'{print $3}'</span> | <span class="nb">tr</span> <span class="nt">-d</span> <span class="se">\'</span><span class="sb">`</span>
+<span class="nv">BASE_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cat</span> <span class="si">$(</span><span class="nb">dirname</span> <span class="nv">$0</span><span class="si">)</span>/do_sync.py | <span class="nb">grep</span> <span class="s2">"BASE_DIR = "</span> | <span class="nb">head</span> <span class="nt">-n</span> 1 | <span class="nb">awk</span> <span class="s1">'{print $3}'</span> | <span class="nb">tr</span> <span class="nt">-d</span> <span class="se">\'</span><span class="sb">`</span>
+<span class="nv">tester</span><span class="o">=</span><span class="sb">`</span>/bin/ps aux | <span class="nb">grep</span> <span class="nt">-v</span> <span class="nb">grep</span> | <span class="nb">grep </span>do_sync.py<span class="sb">`</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="o">!</span> <span class="nt">-z</span> <span class="nv">$tester</span> <span class="o">]]</span><span class="p">;</span><span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"sync.sh already running"</span>
+<span class="k">else
+    </span><span class="nb">echo</span> <span class="s2">"/usr/bin/inotifywait -mrq --format '%w%f' -e modify,delete,create,move </span><span class="nv">$BASE_DIR</span><span class="s2"> | </span><span class="si">$(</span><span class="nb">dirname</span> <span class="nv">$0</span><span class="si">)</span><span class="s2">/do_sync.py &gt; </span><span class="nv">$LOG</span><span class="s2"> &amp;"</span>
+    /usr/bin/inotifywait <span class="nt">-mrq</span> <span class="nt">--format</span> <span class="s1">'%w%f'</span> <span class="nt">-e</span> modify,delete,create,move <span class="nv">$BASE_DIR</span> | <span class="si">$(</span><span class="nb">dirname</span> <span class="nv">$0</span><span class="si">)</span>/do_sync.py <span class="o">&gt;</span> <span class="nv">$LOG</span> &amp;
+<span class="k">fi</span>
+</code></pre></div></div>
+
+<p><strong>do_sync.py</strong></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#!/usr/bin/python
+# -*- coding: utf-8 -*-
+# Author: gaopenghigh@gmail.com
+</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">commands</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="c1">### CONFIGS, YOU CAN CHANGE SETTINGS HERE ###
+</span><span class="n">THREAD_NUM</span> <span class="o">=</span> <span class="mi">2</span>                <span class="c1"># how many threads do the rsync job
+</span><span class="n">SLEEP_TIME</span> <span class="o">=</span> <span class="mi">3</span>                <span class="c1"># if nothing to sync, just sleep, second
+</span><span class="n">MERGE_NUM</span> <span class="o">=</span> <span class="mi">25</span>                <span class="c1"># try to sync dirs instead of files in the same dir
+</span><span class="n">BASE_DIR</span> <span class="o">=</span> <span class="s">'/home/admin/run'</span>  <span class="c1"># root dir you want to sync, anything out of this dir will not sync
+</span><span class="n">LOG_FILE</span> <span class="o">=</span> <span class="s">'/home/admin/out/sync.log'</span>  <span class="c1"># log file, set to '/dev/null' if no log file needed
+</span><span class="n">DESTS</span> <span class="o">=</span> <span class="p">[</span>                     <span class="c1"># Destination Hosts
+</span>        <span class="s">'hz-wsbuyblog-web1'</span><span class="p">,</span>
+        <span class="s">'hz-wsbuyblog-web2'</span><span class="p">,</span>
+        <span class="s">'hz-ws-buyblog-web3'</span>
+        <span class="p">]</span>
+<span class="n">DESTS</span> <span class="o">=</span> <span class="p">[</span><span class="s">'hz-wsbuyblog-web1'</span><span class="p">,]</span>
+<span class="c1">### END OF CONFIGS ###
+</span>
+
+<span class="k">class</span> <span class="nc">WorkThread</span><span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">):</span>
+    <span class="s">''' working thread in thread pool'''</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">work_set</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">=</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">work_set</span> <span class="o">=</span> <span class="n">work_set</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setDaemon</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s">'''always trying to get rsync job, if nothing to sync, sleep SLEEP_TIME seconds'''</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># if too many files need to sync, try rsync dir of these files
+</span>                <span class="n">set_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work_set</span><span class="p">)</span>
+                <span class="k">while</span> <span class="n">set_size</span> <span class="o">&gt;</span> <span class="n">MERGE_NUM</span><span class="p">:</span>
+                    <span class="n">last_size</span> <span class="o">=</span> <span class="n">set_size</span>
+                    <span class="n">merge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work_set</span><span class="p">)</span>
+                    <span class="n">set_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work_set</span><span class="p">)</span>
+                    <span class="c1"># Can not merge any more
+</span>                    <span class="k">if</span> <span class="n">last_size</span> <span class="o">==</span> <span class="n">set_size</span><span class="p">:</span>
+                        <span class="k">break</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work_set</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">BASE_DIR</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+                    <span class="n">dest_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">dest_file</span> <span class="o">=</span> <span class="n">f</span>
+                <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">DESTS</span><span class="p">:</span>
+                    <span class="n">cmd</span> <span class="o">=</span> <span class="s">'/usr/bin/rsync -az --delete </span><span class="si">%</span><span class="s">s </span><span class="si">%</span><span class="s">s:</span><span class="si">%</span><span class="s">s'</span> <span class="o">%</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">dest_file</span><span class="p">)</span>
+                    <span class="n">res</span> <span class="o">=</span> <span class="n">commands</span><span class="o">.</span><span class="n">getstatusoutput</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">flag</span> <span class="o">=</span> <span class="s">'FAIL'</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">flag</span> <span class="o">=</span> <span class="s">'OK'</span>
+                    <span class="k">print</span> <span class="s">'[</span><span class="si">%</span><span class="s">s] [WAITING:</span><span class="si">%</span><span class="s">s] [</span><span class="si">%</span><span class="s">s] </span><span class="si">%</span><span class="s">s ---&gt; </span><span class="si">%</span><span class="s">s:</span><span class="si">%</span><span class="s">s'</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">'</span><span class="si">%</span><span class="s">Y-</span><span class="si">%</span><span class="s">m-</span><span class="si">%</span><span class="s">d_</span><span class="si">%</span><span class="s">H:</span><span class="si">%</span><span class="s">M:</span><span class="si">%</span><span class="s">S'</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work_set</span><span class="p">),</span> <span class="n">flag</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">dest_file</span><span class="p">)</span>
+            <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">SLEEP_TIME</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">print</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
+                <span class="k">raise</span>
+
+
+<span class="k">class</span> <span class="nc">ThreadPool</span><span class="p">:</span>
+    <span class="c1"># thread pool
+</span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">work_set</span><span class="p">,</span> <span class="n">thread_num</span> <span class="o">=</span> <span class="mi">10</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">work_set</span> <span class="o">=</span> <span class="n">work_set</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">threads</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thread_num</span> <span class="o">=</span> <span class="n">thread_num</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_thread_pool</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_create_thread_pool</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">threads</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">thread_num</span><span class="p">):</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">WorkThread</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work_set</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">threads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="n">file_set</span><span class="p">):</span>
+    <span class="s">'''
+    if more thanfiles in the same dir, use dir instead of these files to make file_set smaller
+    '''</span>
+    <span class="k">print</span> <span class="s">'### MERGE </span><span class="si">%</span><span class="s">s'</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">file_set</span><span class="p">),</span>
+    <span class="n">tmp_set</span> <span class="o">=</span> <span class="n">file_set</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">dir_dic</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">tmp_set</span><span class="p">:</span>
+        <span class="nb">dir</span> <span class="o">=</span> <span class="s">'/'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">'/'</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">dir</span> <span class="ow">in</span> <span class="n">dir_dic</span><span class="p">:</span>
+            <span class="n">dir_dic</span><span class="p">[</span><span class="nb">dir</span><span class="p">]</span> <span class="o">+=</span> <span class="p">[</span><span class="n">f</span><span class="p">,]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dir_dic</span><span class="p">[</span><span class="nb">dir</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">,]</span>
+    <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">fs</span> <span class="ow">in</span> <span class="n">dir_dic</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">fs</span><span class="p">:</span>
+                <span class="n">file_set</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">file_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s">'---&gt; </span><span class="si">%</span><span class="s">s'</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">file_set</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">review</span><span class="p">(</span><span class="n">file_set</span><span class="p">):</span>
+    <span class="s">'''delete unnecessary files'''</span>
+    <span class="n">all_files</span> <span class="o">=</span> <span class="n">file_set</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">all_files</span><span class="p">:</span>
+        <span class="c1"># added dir
+</span>        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="c1"># do not need rsync files in the dir
+</span>            <span class="n">tmp_set</span> <span class="o">=</span> <span class="n">file_set</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">xf</span> <span class="ow">in</span> <span class="n">tmp_set</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">xf</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="ow">and</span> <span class="n">xf</span> <span class="o">!=</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">file_set</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">xf</span><span class="p">)</span>
+    <span class="n">all_files</span> <span class="o">=</span> <span class="n">file_set</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">all_files</span><span class="p">:</span>
+        <span class="c1"># deleted file or dir
+</span>        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">file_set</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">father</span> <span class="o">=</span> <span class="s">'/'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">'/'</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">while</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">father</span><span class="p">):</span>
+                <span class="n">father</span> <span class="o">=</span> <span class="s">'/'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">father</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">'/'</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">file_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">father</span><span class="p">)</span>
+            <span class="n">tmp_set</span> <span class="o">=</span> <span class="n">file_set</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">xf</span> <span class="ow">in</span> <span class="n">tmp_set</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">xf</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">father</span><span class="p">)</span> <span class="ow">and</span> <span class="n">xf</span> <span class="o">!=</span> <span class="n">father</span><span class="p">:</span>
+                    <span class="n">file_set</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">xf</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">file_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([])</span>
+    <span class="n">tp</span> <span class="o">=</span> <span class="n">ThreadPool</span><span class="p">(</span><span class="n">file_set</span><span class="p">,</span> <span class="n">THREAD_NUM</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">tp</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">"create thread pool failed"</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+        <span class="n">ignore</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">file_set_tmp</span> <span class="o">=</span> <span class="n">file_set</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">exist_file</span> <span class="ow">in</span> <span class="n">file_set_tmp</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">exist_file</span><span class="p">)</span> <span class="ow">and</span> <span class="n">line</span> <span class="o">!=</span> <span class="n">exist_file</span><span class="p">:</span>
+                <span class="n">ignore</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="n">ignore</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">file_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">review</span><span class="p">(</span><span class="n">file_set</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">'__main__'</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</code></pre></div></div>
+
+<hr />
+
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">做美好的人，做酷的事</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>做美好的人，做酷的事</li>
+          <li><a href="mailto:gaopenghigh@gmail.com">gaopenghigh@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/gaopenghigh"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">gaopenghigh</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>记录所学所想
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

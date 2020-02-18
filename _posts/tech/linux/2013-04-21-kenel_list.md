@@ -19,7 +19,7 @@ toc: true
 
 一个双向链表的元素包含一个类型为`list_head`的变量，`list_head`结构里面，`next`和`prev`分别表示通用双向列表向前和向后的指针元素。需要注意的是，入下图所示，`next`和`prev`所指向的是另一个`list_head`结构的地址，而非这个链表元素的地址。（要得到这个链表元素的地址，可以用`list_entry()`宏来得到，具体见下面）
 
-![`list_head`和链表结构图](img/kernel_list_head.png)
+![`list_head`和链表结构图](/assets/kernel_list_head.png)
 
 对包含了`list_head`的双向列表，有以下的处理函数和宏：
 

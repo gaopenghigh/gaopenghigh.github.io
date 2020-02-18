@@ -10,8 +10,8 @@
   <meta name="description" content="Linux 内存管理(5): 进程地址空间的结构">
 
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="canonical" href="http://localhost:4000/tech/2013/11/09/mm_05_process_memory.html">
-  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://localhost:4000/feed.xml">
+  <link rel="canonical" href="http://gaopenghigh.github.io/tech/2013/11/09/mm_05_process_memory.html">
+  <link rel="alternate" type="application/rss+xml" title="做美好的人，做酷的事" href="http://gaopenghigh.github.io/feed.xml">
 </head>
 
 
@@ -92,7 +92,7 @@
 <p>进程切换的过程中，内核空间不变，只不过使用的用户空间是各个进程自己的地址空间。
 如图：</p>
 
-<p><img src="img/virtualMemoryInProcessSwitch.png" alt="" /></p>
+<p><img src="/assets/virtualMemoryInProcessSwitch.png" alt="" /></p>
 
 <p>上图中，蓝色部分表示的虚拟内存已经映射到了物理内存中，白色部分没有映射。</p>
 
@@ -103,7 +103,7 @@ Stack，Heap，Memory Mapping Segment，BSS Segment，Data Segment，Text Segmen
 
 <p>如图：</p>
 
-<p><img src="img/linuxFlexibleAddressSpaceLayout.png" alt="" /></p>
+<p><img src="/assets/linuxFlexibleAddressSpaceLayout.png" alt="" /></p>
 
 <p>简单介绍如下：</p>
 

@@ -151,7 +151,7 @@ PFRA把页框分为“在用(in_use)”和“未用(unused)”，类似页与上
 
 匿名页的反向映射结构图如下：
 
-![](img/reverse_mapping_for_anonymous_pages.jpg)
+![](/assets/reverse_mapping_for_anonymous_pages.jpg)
 
 
 ## 交换(swapping)
